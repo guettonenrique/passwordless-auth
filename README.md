@@ -1,6 +1,6 @@
 # @guettonenrique/passwordless-auth
 
-Passwordless **email OTP** authentication for HouseVenture Backend in one package
+Passwordless **email OTP** authentication for HouseVenture in one package
 with three entry points:
 
 - **`/functions`** — ready-to-register Firebase Cloud Function factories for
