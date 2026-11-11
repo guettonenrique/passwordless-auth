@@ -185,32 +185,15 @@ constants and validation, but it is not required by the client.
 
 ## Installation
 
-The package publishes to **GitHub Packages** (private). Each consumer needs a
-fine-grained personal access token with _Packages: Read_.
-
-Create and commit a `.npmrc` in each consuming project:
-
-```
-@guettonenrique:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NPM_TOKEN_PASSWORDLESS_AUTH}
-```
-
-Provide `NPM_TOKEN_PASSWORDLESS_AUTH` through the developer environment, EAS,
-Vercel, or Google Secret Manager before installing dependencies. Never commit
-the token itself.
-
 ```bash
-export NPM_TOKEN_PASSWORDLESS_AUTH=<your-fine-grained-PAT>
 npm install @guettonenrique/passwordless-auth
 ```
 
-The runtime SDKs are **not declared as `peerDependencies`** — GitHub Packages
-strips `peerDependenciesMeta` from its npm metadata (known limitation, no ETA:
-community discussions [#41534](https://github.com/orgs/community/discussions/41534) /
-[#51104](https://github.com/orgs/community/discussions/51104)), which makes npm
-auto-install the _other_ entry's stack into your project (e.g. the whole React
-Native stack into a Cloud Functions project). Your project must install what
-your side needs (exact tested versions live in this package's
+Because `/functions` and `/react-native` target separate environments with
+disjoint dependency trees, runtime SDKs are **not declared as top-level
+`dependencies` or `peerDependencies`** (avoiding npm auto-installing the React
+Native stack into a Cloud Functions project or vice versa). Install only what
+your entry needs (exact tested versions live in this package's
 `devDependencies`):
 
 | Entry           | Needs installed in the consuming project                                                                                                                                                                     |
@@ -383,29 +366,23 @@ specifiers; per-entry `tsc` configs keep the type graphs separate.
 
 **Publishing** (manual for v0.x; CI-on-tag from 1.0):
 
-`npm login` does **not** work against `npm.pkg.github.com` (GitHub's registry
-doesn't implement the interactive login protocol — you'll get a 403). Use a
-token instead:
+The package is published publicly to **npmjs** (`publishConfig` sets
+`"registry": "https://registry.npmjs.org"` and `"access": "public"`):
 
-1. Create a **fine-grained PAT**: GitHub → Settings → Developer settings →
-   Personal access tokens → Fine-grained tokens → Generate new token.
-   Repository access: this repo. Permissions: **Contents: Read and write**,
-   **Packages: Read and write**.
-2. Publish:
+1. Authenticate with npm:
 
    ```bash
-   npm publish --//npm.pkg.github.com/:_authToken="github_pat_XXXX"
+   npm login
    ```
 
-   or persist the token in `~/.npmrc`:
+2. Publish (`prepublishOnly` runs `npm run build` automatically):
 
-   ```
-   @guettonenrique:registry=https://npm.pkg.github.com
-   //npm.pkg.github.com/:_authToken=github_pat_XXXX
+   ```bash
+   npm publish
    ```
 
 3. Verify:
 
    ```bash
-   npm view @guettonenrique/passwordless-auth --registry=https://npm.pkg.github.com
+   npm view @guettonenrique/passwordless-auth
    ```
