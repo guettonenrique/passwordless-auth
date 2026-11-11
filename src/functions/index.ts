@@ -1,5 +1,5 @@
 // Firebase Cloud Functions entry.
-// Import from '@houseventure/passwordless-auth/functions' in your project's
+// Import from '@guettonenrique/passwordless-auth/functions' in your project's
 // functions/src/index.ts and register the returned handlers as exports.
 
 export { createRequestEmailOtp } from './requestEmailOtp';

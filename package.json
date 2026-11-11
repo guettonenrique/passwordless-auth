@@ -1,5 +1,5 @@
 {
-  "name": "@houseventure/passwordless-auth",
+  "name": "@guettonenrique/passwordless-auth",
   "version": "0.1.0",
   "description": "Passwordless email-OTP authentication: Firebase Cloud Function factories + React Native API and UI. One package, two entries, zero shared runtime deps.",
   "license": "MIT",

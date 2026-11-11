@@ -1,4 +1,4 @@
-# @houseventure/passwordless-auth
+# @guettonenrique/passwordless-auth
 
 Passwordless **email-OTP** authentication as one package with two entry points:
 
@@ -21,12 +21,12 @@ and *Packages: Read*.
 `.npmrc` (project root or `~/.npmrc`):
 
 ```
-@houseventure:registry=https://npm.pkg.github.com
+@guettonenrique:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=<your-fine-grained-PAT>
 ```
 
 ```bash
-npm install @houseventure/passwordless-auth
+npm install @guettonenrique/passwordless-auth
 ```
 
 Peer dependencies are resolved by *your* projects (install what your side needs):
@@ -49,7 +49,7 @@ import {
   createRequestEmailOtp,
   createVerifyEmailOtp,
   createCleanupExpiredOtps,
-} from '@houseventure/passwordless-auth/functions';
+} from '@guettonenrique/passwordless-auth/functions';
 import { resolveOrCreateUser } from './utils/yourUserProvisioning';
 
 const sendgridKey = defineSecret('SENDGRID_API_KEY');
@@ -143,7 +143,7 @@ exports.requestEmailOtp = createRequestEmailOtp({
 
 ```tsx
 import { useState } from 'react';
-import { EmailOtpModal } from '@houseventure/passwordless-auth/react-native';
+import { EmailOtpModal } from '@guettonenrique/passwordless-auth/react-native';
 
 const [otpVisible, setOtpVisible] = useState(false);
 
@@ -170,7 +170,7 @@ import {
   verifyEmailOtp,        // (email, code) → customToken
   signInWithEmailOtp,    // (email, code) → signs in via signInWithCustomToken
   OtpInput,              // 6-slot auto-fill code input
-} from '@houseventure/passwordless-auth/react-native';
+} from '@guettonenrique/passwordless-auth/react-native';
 ```
 
 `OtpInput` uses one hidden native input (the only way paste + iOS `oneTimeCode`
@@ -218,12 +218,12 @@ token instead:
    or persist the token in `~/.npmrc`:
 
    ```
-   @houseventure:registry=https://npm.pkg.github.com
+   @guettonenrique:registry=https://npm.pkg.github.com
    //npm.pkg.github.com/:_authToken=github_pat_XXXX
    ```
 
 3. Verify:
 
    ```bash
-   npm view @houseventure/passwordless-auth --registry=https://npm.pkg.github.com
+   npm view @guettonenrique/passwordless-auth --registry=https://npm.pkg.github.com
    ```
