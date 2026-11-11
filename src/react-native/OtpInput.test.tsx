@@ -18,6 +18,10 @@ describe('OtpInput', () => {
     // hidden input: opacity 0 in its style
     const input = root.findByProps({ accessibilityLabel: HIDDEN_INPUT_LABEL });
     expect(input.props.style.opacity).toBe(0);
+    const row = renderer!.root.find(
+      (node) => node.type === 'view' && node.props.style?.width === '100%'
+    );
+    expect(row.props.style.width).toBe('100%');
     act(() => renderer!.unmount());
   });
 

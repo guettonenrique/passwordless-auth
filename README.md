@@ -6,6 +6,10 @@ Passwordless **email-OTP** authentication as one package with two entry points:
 - **`/react-native`** — the mobile API layer plus `OtpInput` (auto-fill code boxes) and `EmailOtpModal` (the full two-step dialog)
 - **`/shared`** — the single source of truth for the contract: constants, types, validation, email template. Pure TS, no SDK imports.
 
+The React Native entry point is optional. The backend functions can be used
+without installing the package in the client, allowing the app to own the
+email form, OTP input, modal, styling, resend timer, and error handling.
+
 The security model is baked in and tested: SHA-256 hashed codes (never plaintext), timing-safe comparison, single-use codes deleted inside the verify transaction, 5-attempt brute-force cap, 60-second resend cooldown, 10-minute expiry, and client-side access to the OTP collection blocked by rules.
 
 > **v0.1** — first publish. API may still change; breaking changes allowed until 1.0.
@@ -113,6 +117,49 @@ The security model is baked in and tested: SHA-256 hashed codes (never plaintext
 ### That's it. No other changes required.
 
 The package never touches your auth state, navigation, user schema, or email infrastructure beyond what you explicitly configure.
+
+### Client-owned UI (without `/react-native`)
+
+You can omit the package from the client entirely and call the deployed
+Firebase callable functions with the app's existing Firebase dependencies.
+The client flow is:
+
+1. Call `requestEmailOtp` with the normalized email.
+2. Collect the six-digit code in your own UI.
+3. Call `verifyEmailOtp` with the email and code.
+4. Read `customToken` from the response.
+5. Sign in with Firebase Auth using `signInWithCustomToken`.
+
+With React Native Firebase, the direct implementation looks like this:
+
+```typescript
+import { getAuth, signInWithCustomToken } from '@react-native-firebase/auth';
+import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
+
+type VerifyOtpResponse = { customToken: string };
+
+const requestEmailOtp = httpsCallable<{ email: string }, { status: string; message: string }>(
+  getFunctions(),
+  'requestEmailOtp'
+);
+const verifyEmailOtp = httpsCallable<
+  { email: string; code: string },
+  VerifyOtpResponse
+>(getFunctions(), 'verifyEmailOtp');
+
+await requestEmailOtp({ email: email.trim().toLowerCase() });
+
+const result = await verifyEmailOtp({
+  email: email.trim().toLowerCase(),
+  code: code.trim(),
+});
+
+await signInWithCustomToken(getAuth(), result.data.customToken);
+```
+
+The callable names and payloads must match the deployed backend functions.
+The package's `/shared` entry can still be used separately for shared
+constants and validation, but it is not required by the client.
 
 ---
 

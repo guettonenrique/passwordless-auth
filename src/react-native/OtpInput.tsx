@@ -92,6 +92,7 @@ export function OtpInput({
 
   return (
     <TouchableOpacity
+      style={{ width: '100%' }}
       activeOpacity={1}
       onPress={() => {
         if (!disabled) inputRef.current?.focus();
@@ -99,6 +100,7 @@ export function OtpInput({
       <View
         style={{
           flexDirection: 'row',
+          width: '100%',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginVertical: 12,
