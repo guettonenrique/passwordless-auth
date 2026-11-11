@@ -1,0 +1,130 @@
+{
+  "name": "@houseventure/passwordless-auth",
+  "version": "0.1.0",
+  "description": "Passwordless email-OTP authentication: Firebase Cloud Function factories + React Native API and UI. One package, two entries, zero shared runtime deps.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    "./shared": {
+      "import": {
+        "types": "./dist/shared/index.d.ts",
+        "default": "./dist/shared/index.js"
+      },
+      "require": {
+        "types": "./dist/shared/index.d.cts",
+        "default": "./dist/shared/index.cjs"
+      }
+    },
+    "./functions": {
+      "import": {
+        "types": "./dist/functions/index.d.cts",
+        "default": "./dist/functions/index.cjs"
+      },
+      "require": {
+        "types": "./dist/functions/index.d.cts",
+        "default": "./dist/functions/index.cjs"
+      }
+    },
+    "./react-native": {
+      "import": {
+        "types": "./dist/react-native/index.d.ts",
+        "default": "./dist/react-native/index.js"
+      },
+      "default": {
+        "types": "./dist/react-native/index.d.ts",
+        "default": "./dist/react-native/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.shared.json && tsc --noEmit -p tsconfig.functions.json && tsc --noEmit -p tsconfig.react-native.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@react-native-firebase/app": ">=17",
+    "@react-native-firebase/auth": ">=17",
+    "@react-native-firebase/functions": ">=17",
+    "@sendgrid/mail": ">=8",
+    "expo-haptics": ">=12",
+    "firebase-admin": ">=11",
+    "firebase-functions": ">=4",
+    "lucide-react-native": ">=0.300",
+    "react": ">=18",
+    "react-native": ">=0.73",
+    "react-native-keyboard-controller": ">=12"
+  },
+  "peerDependenciesMeta": {
+    "@react-native-firebase/app": {
+      "optional": true
+    },
+    "@react-native-firebase/auth": {
+      "optional": true
+    },
+    "@react-native-firebase/functions": {
+      "optional": true
+    },
+    "@sendgrid/mail": {
+      "optional": true
+    },
+    "expo-haptics": {
+      "optional": true
+    },
+    "firebase-admin": {
+      "optional": true
+    },
+    "firebase-functions": {
+      "optional": true
+    },
+    "lucide-react-native": {
+      "optional": true
+    },
+    "react-native-keyboard-controller": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.0",
+    "@react-native-firebase/app": "^27.1.0",
+    "@react-native-firebase/auth": "^27.1.0",
+    "@react-native-firebase/functions": "^27.1.0",
+    "@sendgrid/mail": "^8.1.5",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-test-renderer": "^19.3.1",
+    "eslint": "^9.30.0",
+    "expo-haptics": "~58.0.7",
+    "firebase-admin": "^14.2.0",
+    "firebase-functions": "^7.3.2",
+    "lucide-react-native": "^1.71.0",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-keyboard-controller": "1.22.7",
+    "react-test-renderer": "19.3.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.35.0",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "esbuild@0.27.7": true,
+    "@firebase/util@1.15.3": true,
+    "fsevents@2.3.3": true,
+    "protobufjs@7.6.6": true
+  }
+}
