@@ -1,6 +1,6 @@
 {
   "name": "@guettonenrique/passwordless-auth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Passwordless email-OTP authentication: Firebase Cloud Function factories + React Native API and UI. One package, two entries, zero shared runtime deps.",
   "license": "MIT",
   "type": "module",
@@ -52,48 +52,6 @@
     "lint": "eslint .",
     "test": "vitest run",
     "clean": "rm -rf dist"
-  },
-  "peerDependencies": {
-    "@react-native-firebase/app": ">=17",
-    "@react-native-firebase/auth": ">=17",
-    "@react-native-firebase/functions": ">=17",
-    "@sendgrid/mail": ">=8",
-    "expo-haptics": ">=12",
-    "firebase-admin": ">=11",
-    "firebase-functions": ">=4",
-    "lucide-react-native": ">=0.300",
-    "react": ">=18",
-    "react-native": ">=0.73",
-    "react-native-keyboard-controller": ">=12"
-  },
-  "peerDependenciesMeta": {
-    "@react-native-firebase/app": {
-      "optional": true
-    },
-    "@react-native-firebase/auth": {
-      "optional": true
-    },
-    "@react-native-firebase/functions": {
-      "optional": true
-    },
-    "@sendgrid/mail": {
-      "optional": true
-    },
-    "expo-haptics": {
-      "optional": true
-    },
-    "firebase-admin": {
-      "optional": true
-    },
-    "firebase-functions": {
-      "optional": true
-    },
-    "lucide-react-native": {
-      "optional": true
-    },
-    "react-native-keyboard-controller": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",

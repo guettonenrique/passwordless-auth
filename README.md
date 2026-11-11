@@ -29,12 +29,19 @@ and *Packages: Read*.
 npm install @guettonenrique/passwordless-auth
 ```
 
-Peer dependencies are resolved by *your* projects (install what your side needs):
+The runtime SDKs are **not declared as `peerDependencies`** — GitHub Packages
+strips `peerDependenciesMeta` from its npm metadata (known limitation, no ETA:
+community discussions [#41534](https://github.com/orgs/community/discussions/41534) /
+[#51104](https://github.com/orgs/community/discussions/51104)), which makes npm
+auto-install the *other* entry's stack into your project (e.g. the whole React
+Native stack into a Cloud Functions project). Your project must install what
+your side needs (exact tested versions live in this package's
+`devDependencies`):
 
 | Entry | Needs installed in the consuming project |
 |---|---|
 | `/functions` | `firebase-functions >=4`, `firebase-admin >=11`, `@sendgrid/mail >=8` (or pass a custom sender) |
-| `/react-native` | `@react-native-firebase/app + auth + functions >=17`, `react >=18`, `react-native >=0.73`, `react-native-keyboard-controller >=12`, `lucide-react-native >=0.300`; optional: `expo-haptics` (haptic feedback) |
+| `/react-native` | `@react-native-firebase/app + auth + functions >=17`, `react >=18`, `react-native >=0.73`, `react-native-keyboard-controller >=1`, `lucide-react-native >=0.300`; optional: `expo-haptics` (haptic feedback) |
 
 ---
 
