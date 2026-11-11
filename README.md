@@ -12,6 +12,110 @@ The security model is baked in and tested: SHA-256 hashed codes (never plaintext
 
 ---
 
+## What the package does
+
+**Backend (`/functions`)** — three factory functions that return ready-to-deploy Firebase Cloud Functions:
+
+| Factory | What it handles |
+|---|---|
+| `createRequestEmailOtp` | Email validation, 60 s resend cooldown, cryptographically secure 6-digit code generation, SHA-256 hashing (`email:code`), Firestore write, email dispatch (SendGrid default or custom sender), structured error responses |
+| `createVerifyEmailOtp` | Code lookup, timing-safe hash comparison, expiry check, 5-attempt brute-force cap, single-use deletion inside a Firestore transaction, user provisioning (delegated to your hook), Firebase custom token minting |
+| `createCleanupExpiredOtps` | Scheduled (every 15 min) drain-loop that deletes orphaned OTP docs (users who requested but never entered a code) |
+
+**Mobile (`/react-native`)** — API layer + UI components:
+
+| Export | What it does |
+|---|---|
+| `requestEmailOtp(email)` | Calls the backend, returns `{ status, message }` |
+| `verifyEmailOtp(email, code)` | Calls the backend, returns the Firebase custom token |
+| `signInWithEmailOtp(email, code)` | Verifies + `signInWithCustomToken` — one call, user is signed in |
+| `<OtpInput />` | 6-slot auto-fill code input (paste, iOS `oneTimeCode` / Android `one-time-code`, haptics, auto-submit on completion) |
+| `<EmailOtpModal />` | Full two-step dialog (email → code) with cooldown countdown, resend, error banner, double-submit guard. On success the modal closes and your existing `onAuthStateChanged` listener takes over |
+
+**Shared (`/shared`)** — constants, types, email template, validation utils. Pure TS, no SDK imports. Single source of truth so backend and mobile can't drift.
+
+**Security model (baked in, tested):**
+
+- Codes are SHA-256 hashed before storage — plaintext never touches Firestore
+- Timing-safe comparison prevents hash-timing attacks
+- Single-use: the doc is deleted inside the verify transaction (concurrent verifies → one winner)
+- 5-attempt cap per code, then the doc is destroyed
+- 60-second resend cooldown, 10-minute code expiry
+- Client-side access to the OTP collection is blocked by Firestore rules (only admin SDK writes)
+- App Check enforcement is a one-flag option (`enforceAppCheck: true`)
+
+---
+
+## What you need to do
+
+### Backend (Cloud Functions project)
+
+1. **Install** the package (see below).
+2. **Register the three functions** — ~30 lines total:
+
+   ```typescript
+   // functions/src/index.ts (or per-function files)
+   import {
+     createRequestEmailOtp,
+     createVerifyEmailOtp,
+     createCleanupExpiredOtps,
+   } from '@guettonenrique/passwordless-auth/functions';
+
+   exports.requestEmailOtp = createRequestEmailOtp({
+     appName: 'MyApp',
+     sendgrid: { apiKey: defineSecret('SENDGRID_API_KEY'), fromEmail, fromName },
+   });
+
+   exports.verifyEmailOtp = createVerifyEmailOtp({
+     provision: async (email) => {
+       // Your user schema: resolve or create, return the uid.
+       const { user } = await resolveOrCreateUser(email, { emailVerified: true });
+       return user.uid;
+     },
+   });
+
+   exports.cleanupExpiredOtps = createCleanupExpiredOtps();
+   ```
+
+   The **only required customization** is the `provision` hook — it owns your user schema (Firestore docs, subscribers, notification settings, etc.). Everything else is config or defaults.
+
+3. **Lock down the OTP collection** in `firestore.rules`:
+
+   ```javascript
+   match /auth_otps/{document=**} {
+     allow read, write: if false;
+   }
+   ```
+
+4. **Deploy**: `firebase deploy --only functions,firestore:rules`
+
+### Mobile (React Native / Expo)
+
+1. **Install** the package + the mobile peers (see table below).
+2. **Add the modal** to your auth screen — ~10 lines:
+
+   ```tsx
+   import { EmailOtpModal } from '@guettonenrique/passwordless-auth/react-native';
+
+   const [otpVisible, setOtpVisible] = useState(false);
+
+   <TouchableOpacity onPress={() => setOtpVisible(true)}>
+     <Text>Continue with email code</Text>
+   </TouchableOpacity>
+
+   <EmailOtpModal visible={otpVisible} onClose={() => setOtpVisible(false)} />
+   ```
+
+   That's the entire integration. On success the modal closes and your existing `onAuthStateChanged` listener flips the app into the signed-in state — no navigation code needed.
+
+3. **Optional:** use `OtpInput` + the API functions directly if you want to build a custom dialog.
+
+### That's it. No other changes required.
+
+The package never touches your auth state, navigation, user schema, or email infrastructure beyond what you explicitly configure.
+
+---
+
 ## Installation
 
 The package publishes to **GitHub Packages** (private). Each consumer needs a
