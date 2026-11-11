@@ -5,6 +5,26 @@ import { defineConfig } from 'tsup';
 //   ./shared        → ESM or CJS (whichever the importer uses)
 //   ./functions     → CJS only (Cloud Functions runtime)
 //   ./react-native  → ESM only (Metro transforms it)
+// Explicit externals — every third-party import is left to the consumer.
+// (tsup auto-externals `dependencies`/`peerDependencies` only; this package
+// has neither, so relying on that would make the build try to bundle the
+// React Native stack from devDependencies and fail.)
+const external = [
+  // /functions consumers provide
+  'firebase-functions',
+  'firebase-admin',
+  '@sendgrid/mail',
+  // /react-native consumers provide
+  '@react-native-firebase/app',
+  '@react-native-firebase/auth',
+  '@react-native-firebase/functions',
+  'react',
+  'react-native',
+  'react-native-keyboard-controller',
+  'lucide-react-native',
+  'expo-haptics',
+];
+
 export default defineConfig({
   entry: {
     'shared/index': 'src/shared/index.ts',
@@ -16,4 +36,5 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   splitting: false,
+  external,
 });
