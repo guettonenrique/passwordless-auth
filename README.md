@@ -1,6 +1,7 @@
 # @guettonenrique/passwordless-auth
 
-Passwordless **email OTP** authentication in one package with three entry points:
+Passwordless **email OTP** authentication for HouseVenture Backend in one package
+with three entry points:
 
 - **`/functions`** — ready-to-register Firebase Cloud Function factories for
   sending codes, verifying codes, and scheduled cleanup.
@@ -23,90 +24,59 @@ rules.
 
 ---
 
-## Package overview
-
-### Backend (`/functions`)
-
-Three factory functions return ready-to-deploy Firebase Cloud Functions:
-
-| Factory                    | What it handles                                                                                                                                                                                                           |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createRequestEmailOtp`    | Email validation, 60 s resend cooldown, cryptographically secure 6-digit code generation, SHA-256 hashing (`email:code`), Firestore write, email dispatch (SendGrid default or custom sender), structured error responses |
-| `createVerifyEmailOtp`     | Code lookup, timing-safe hash comparison, expiry check, 5-attempt brute-force cap, single-use deletion inside a Firestore transaction, user provisioning (delegated to your hook), Firebase custom token minting          |
-| `createCleanupExpiredOtps` | Scheduled (every 15 min) drain-loop that deletes orphaned OTP docs (users who requested but never entered a code)                                                                                                         |
-
-### Mobile (`/react-native`)
-
-The mobile entry point provides the API layer and UI components:
-
-| Export                            | What it does                                                                                                                                                                                   |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `requestEmailOtp(email)`          | Calls the backend, returns `{ status, message }`                                                                                                                                               |
-| `verifyEmailOtp(email, code)`     | Calls the backend, returns the Firebase custom token                                                                                                                                           |
-| `signInWithEmailOtp(email, code)` | Verifies + `signInWithCustomToken` — one call, user is signed in                                                                                                                               |
-| `<OtpInput />`                    | 6-slot auto-fill code input (paste, iOS `oneTimeCode` / Android `one-time-code`, haptics, auto-submit on completion)                                                                           |
-| `<EmailOtpModal />`               | Full two-step dialog (email → code) with cooldown countdown, resend, error banner, double-submit guard. On success the modal closes and your existing `onAuthStateChanged` listener takes over |
-
-### Shared (`/shared`)
-
-Constants, types, email template, and validation utilities. This entry point
-is pure TypeScript with no SDK imports, keeping the backend and mobile
-contracts in sync.
-
-### Security model
-
-- Codes are SHA-256 hashed before storage — plaintext never touches Firestore
-- Timing-safe comparison prevents hash-timing attacks
-- Single-use: the doc is deleted inside the verify transaction (concurrent verifies → one winner)
-- 5-attempt cap per code, then the doc is destroyed
-- 60-second resend cooldown, 10-minute code expiry
-- Client-side access to the OTP collection is blocked by Firestore rules (only admin SDK writes)
-- App Check enforcement is a one-flag option (`enforceAppCheck: true`)
-
----
-
 ## Quick start
 
 ### Backend
 
-1. **Install** the package (see below).
-2. **Register the three functions** — ~30 lines total:
+1. **Install** the package: `npm install @guettonenrique/passwordless-auth`.
+2. **Register the three functions**:
 
    ```typescript
-   // functions/src/index.ts (or per-function files)
-   import {
-     createRequestEmailOtp,
-     createVerifyEmailOtp,
-     createCleanupExpiredOtps,
-   } from "@guettonenrique/passwordless-auth/functions";
+   // callable/requestEmailOtp.ts
+   import { createRequestEmailOtp } from "@guettonenrique/passwordless-auth/functions";
 
    exports.requestEmailOtp = createRequestEmailOtp({
      appName: "MyApp",
+     enforceAppCheck: false, // flip to true in production once App Check is set up
      sendgrid: {
        apiKey: defineSecret("SENDGRID_API_KEY"),
        fromEmail,
        fromName,
      },
+     // Or for testing without SendGrid:
+     // sendEmail: async (email) => {
+     //   console.log(`[DEV OTP] ${email.to} → ${email.subject}`);
+     // },
    });
+   ```
+
+   ```typescript
+   // callable/verifyEmailOtp.ts
+   import { createVerifyEmailOtp } from "@guettonenrique/passwordless-auth/functions";
 
    exports.verifyEmailOtp = createVerifyEmailOtp({
+     enforceAppCheck: false, // flip to true in production once App Check is set up
      provision: async (email) => {
-       // Your user schema: resolve or create, return the uid.
+       // Your user provisioning schema.
        const { user } = await resolveOrCreateUser(email, {
          emailVerified: true,
        });
        return user.uid;
      },
    });
+   ```
+
+   ```typescript
+   // schedule/cleanupExpiredOtps.ts
+   import { createCleanupExpiredOtps } from "@guettonenrique/passwordless-auth/functions";
 
    exports.cleanupExpiredOtps = createCleanupExpiredOtps();
    ```
 
-   The **only required customization** is the `provision` hook — it owns your user schema (Firestore docs, subscribers, notification settings, etc.). Everything else is config or defaults.
-
 3. **Lock down the OTP collection** in `firestore.rules`:
 
    ```javascript
+   // Auth OTP documents are maintained exclusively by backend Cloud Functions.
    match /auth_otps/{document=**} {
      allow read, write: if false;
    }
@@ -116,8 +86,8 @@ contracts in sync.
 
 ### Mobile
 
-1. **Install** the package + the mobile peers (see table below).
-2. **Add the modal** to your auth screen — ~10 lines:
+1. **Install** the package: `npm install @guettonenrique/passwordless-auth`.
+2. **Add the modal** to your auth screen:
 
    ```tsx
    import { EmailOtpModal } from '@guettonenrique/passwordless-auth/react-native';
@@ -183,20 +153,57 @@ constants and validation, but it is not required by the client.
 
 ---
 
+## Package overview
+
+### Backend (`/functions`)
+
+Three factory functions return ready-to-deploy Firebase Cloud Functions:
+
+| Factory                    | What it handles                                                                                                                                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createRequestEmailOtp`    | Email validation, 60 s resend cooldown, cryptographically secure 6-digit code generation, SHA-256 hashing (`email:code`), Firestore write, email dispatch (SendGrid default or custom sender), structured error responses |
+| `createVerifyEmailOtp`     | Code lookup, timing-safe hash comparison, expiry check, 5-attempt brute-force cap, single-use deletion inside a Firestore transaction, user provisioning (delegated to your hook), Firebase custom token minting          |
+| `createCleanupExpiredOtps` | Scheduled (every 15 min) drain-loop that deletes orphaned OTP docs (users who requested but never entered a code)                                                                                                         |
+
+### Mobile (`/react-native`)
+
+The mobile entry point provides the API layer and UI components:
+
+| Export                            | What it does                                                                                                                                                                                   |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `requestEmailOtp(email)`          | Calls the backend, returns `{ status, message }`                                                                                                                                               |
+| `verifyEmailOtp(email, code)`     | Calls the backend, returns the Firebase custom token                                                                                                                                           |
+| `signInWithEmailOtp(email, code)` | Verifies + `signInWithCustomToken` — one call, user is signed in                                                                                                                               |
+| `<OtpInput />`                    | 6-slot auto-fill code input (paste, iOS `oneTimeCode` / Android `one-time-code`, haptics, auto-submit on completion)                                                                           |
+| `<EmailOtpModal />`               | Full two-step dialog (email → code) with cooldown countdown, resend, error banner, double-submit guard. On success the modal closes and your existing `onAuthStateChanged` listener takes over |
+
+### Shared (`/shared`)
+
+Constants, types, email template, and validation utilities. This entry point
+is pure TypeScript with no SDK imports, keeping the backend and mobile
+contracts in sync.
+
+### Security model
+
+- Codes are SHA-256 hashed before storage — plaintext never touches Firestore
+- Timing-safe comparison prevents hash-timing attacks
+- Single-use: the doc is deleted inside the verify transaction (concurrent verifies → one winner)
+- 5-attempt cap per code, then the doc is destroyed
+- 60-second resend cooldown, 10-minute code expiry
+- Client-side access to the OTP collection is blocked by Firestore rules (only admin SDK writes)
+- App Check enforcement is a one-flag option (`enforceAppCheck: true`)
+
+---
+
 ## Installation
 
 ```bash
 npm install @guettonenrique/passwordless-auth
 ```
 
-Because `/functions` and `/react-native` target separate environments with
-disjoint dependency trees, runtime SDKs are **not declared as top-level
-`dependencies` or `peerDependencies`** (avoiding npm auto-installing the React
-Native stack into a Cloud Functions project or vice versa). Install only what
-your entry needs (exact tested versions live in this package's
-`devDependencies`):
+Install the peer packages required by the entry point you use (kept out of top-level `peerDependencies` so backend and mobile projects only install their own stack):
 
-| Entry           | Needs installed in the consuming project                                                                                                                                                                     |
+| Entry           | Required in the consuming project                                                                                                                                                                            |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `/functions`    | `firebase-functions >=4`, `firebase-admin >=11`, `@sendgrid/mail >=8` (or pass a custom sender)                                                                                                              |
 | `/react-native` | `@react-native-firebase/app + auth + functions >=17`, `react >=18`, `react-native >=0.73`, `react-native-keyboard-controller >=1`, `lucide-react-native >=0.300`; optional: `expo-haptics` (haptic feedback) |
@@ -208,25 +215,15 @@ your entry needs (exact tested versions live in this package's
 ### 1. Register the three functions
 
 ```typescript
-// functions/src/index.ts
+// callable/requestEmailOtp.ts
 import { defineSecret } from "firebase-functions/params";
-import {
-  createRequestEmailOtp,
-  createVerifyEmailOtp,
-  createCleanupExpiredOtps,
-} from "@guettonenrique/passwordless-auth/functions";
-import { resolveOrCreateUser } from "./utils/yourUserProvisioning";
+import { createRequestEmailOtp } from "@guettonenrique/passwordless-auth/functions";
 
 const sendgridKey = defineSecret("SENDGRID_API_KEY");
 
-// The one project-specific hook: resolve or create the user, return the uid.
-const provision = async (email: string): Promise<string> => {
-  const { user } = await resolveOrCreateUser(email, { emailVerified: true });
-  return user.uid;
-};
-
 exports.requestEmailOtp = createRequestEmailOtp({
   appName: "MyApp",
+  enforceAppCheck: false, // flip to true in production once App Check is set up
   // ⚠️ register the secret on the function so the runtime can resolve it:
   // pass `secrets: [sendgridKey]` via onCall options if your deployment
   // requires it — see "Secrets" below.
@@ -236,8 +233,28 @@ exports.requestEmailOtp = createRequestEmailOtp({
     fromName: "MyApp Support",
   },
 });
+```
 
-exports.verifyEmailOtp = createVerifyEmailOtp({ provision });
+```typescript
+// callable/verifyEmailOtp.ts
+import { createVerifyEmailOtp } from "@guettonenrique/passwordless-auth/functions";
+import { resolveOrCreateUser } from "../utils/yourUserProvisioning";
+
+// The one project-specific hook: resolve or create the user, return the uid.
+const provision = async (email: string): Promise<string> => {
+  const { user } = await resolveOrCreateUser(email, { emailVerified: true });
+  return user.uid;
+};
+
+exports.verifyEmailOtp = createVerifyEmailOtp({
+  enforceAppCheck: false, // flip to true in production once App Check is set up
+  provision,
+});
+```
+
+```typescript
+// schedule/cleanupExpiredOtps.ts
+import { createCleanupExpiredOtps } from "@guettonenrique/passwordless-auth/functions";
 
 // Reaps expired docs (orphans from users who never entered the code).
 exports.cleanupExpiredOtps = createCleanupExpiredOtps();
@@ -285,7 +302,7 @@ it in production once your app ships App Check (React Native: `@react-native-fir
 exports.requestEmailOtp = createRequestEmailOtp({
   appName: "MyApp",
   sendEmail: async (email) => {
-    console.log(`🔑 [DEV OTP] ${email.to}: ${email.code}`);
+    console.log(`[DEV OTP] ${email.to} → ${email.subject}`);
   },
 });
 ```
@@ -350,7 +367,7 @@ server rate limit.
 
 ---
 
-## Testing the package (contributors)
+## Testing the package
 
 ```bash
 npm install
@@ -363,26 +380,3 @@ npm run build       # tsup: ESM+CJS+DTS for each entry
 **Boundary rule:** `src/shared` may import nothing; `src/functions` may not
 import `src/react-native` and vice versa. ESLint enforces it on import
 specifiers; per-entry `tsc` configs keep the type graphs separate.
-
-**Publishing** (manual for v0.x; CI-on-tag from 1.0):
-
-The package is published publicly to **npmjs** (`publishConfig` sets
-`"registry": "https://registry.npmjs.org"` and `"access": "public"`):
-
-1. Authenticate with npm:
-
-   ```bash
-   npm login
-   ```
-
-2. Publish (`prepublishOnly` runs `npm run build` automatically):
-
-   ```bash
-   npm publish
-   ```
-
-3. Verify:
-
-   ```bash
-   npm view @guettonenrique/passwordless-auth
-   ```
