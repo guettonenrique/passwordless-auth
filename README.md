@@ -382,7 +382,7 @@ server rate limit.
 npm install
 npm run typecheck   # 3 per-entry tsc passes
 npm run lint        # includes the cross-entry boundary rule
-npm test            # 58 tests: shared, functions (mocked Firestore/Auth), react-native
+npm test            # 66 tests: shared, functions (mocked Firestore/Auth), react-native
 npm run build       # tsup: ESM+CJS+DTS for each entry
 ```
 

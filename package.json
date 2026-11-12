@@ -46,6 +46,9 @@
     "type": "git",
     "url": "git+https://github.com/guettonenrique/passwordless-auth.git"
   },
+  "bugs": {
+    "url": "https://github.com/guettonenrique/passwordless-auth/issues"
+  },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public"
