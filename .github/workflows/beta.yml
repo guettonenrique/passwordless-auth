@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 jobs:
@@ -39,11 +39,9 @@ jobs:
       - name: Publish beta to npm
         run: npm publish --tag beta --provenance --access public
 
-      - name: Create GitHub Pre-Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Write job summary
         run: |
-          gh release create "v${{ steps.version.outputs.beta_version }}" \
-            --target "${{ github.sha }}" \
-            --prerelease \
-            --generate-notes
+          echo "### Published Beta to npm" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Version:** \`${{ steps.version.outputs.beta_version }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Install:** \`npm install @guettonenrique/passwordless-auth@${{ steps.version.outputs.beta_version }}\`" >> "$GITHUB_STEP_SUMMARY"
