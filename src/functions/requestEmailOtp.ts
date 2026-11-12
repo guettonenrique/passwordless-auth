@@ -14,7 +14,11 @@ import {
   type RequestOtpPayload,
   type RequestOtpResponse,
 } from '../shared';
-import { generateOtpCode, hashOtpCode } from './crypto';
+import {
+  collectSecretParams,
+  generateOtpCode,
+  hashOtpCode,
+} from './crypto';
 import { createSendgridSender } from './senders/sendgrid';
 
 /**
@@ -25,6 +29,7 @@ import { createSendgridSender } from './senders/sendgrid';
  * ```ts
  * exports.requestEmailOtp = createRequestEmailOtp({
  *   appName: 'MyApp',
+ *   secret: defineSecret('OTP_SECRET'),
  *   sendgrid: { apiKey: defineSecret('SENDGRID_API_KEY'), fromEmail, fromName },
  * });
  * ```
@@ -45,12 +50,12 @@ export function createRequestEmailOtp(options: RequestOtpOptions) {
       return createSendgridSender(options.sendgrid);
     })();
 
+  const secrets = collectSecretParams(options.secret, options.sendgrid?.apiKey);
+
   return onCall<RequestOtpPayload, Promise<RequestOtpResponse>>(
     {
       enforceAppCheck: options.enforceAppCheck ?? false,
-      // NOTE: if using the default SendGrid sender, register the project's
-      // secret here, e.g. `secrets: [mySecret]`. The factory cannot know it —
-      // see README.
+      ...(secrets.length > 0 ? { secrets: secrets.map((s) => s.name) } : {}),
     },
     async (request) => {
       const rawEmail = request.data?.email;
@@ -87,7 +92,7 @@ export function createRequestEmailOtp(options: RequestOtpOptions) {
       }
 
       const code = generateOtpCode(CODE_LENGTH);
-      const codeHash = hashOtpCode(email, code);
+      const codeHash = hashOtpCode(email, code, options.secret);
 
       await otpDocRef.set({
         hash: codeHash,

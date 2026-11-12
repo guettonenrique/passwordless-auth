@@ -14,11 +14,11 @@ The React Native entry point is optional. The backend functions can be used
 without installing the package in the client, allowing the app to own the
 email form, OTP input, modal, styling, resend timer, and error handling.
 
-The security model is baked in and tested: SHA-256 hashed codes (never
-plaintext), timing-safe comparison, single-use codes deleted inside the verify
-transaction, a five-attempt brute-force cap, a 60-second resend cooldown,
-10-minute expiry, and client-side access to the OTP collection blocked by
-rules.
+The security model is baked in and tested: HMAC-SHA256 hashed codes keyed with a
+server-side secret (never plaintext), timing-safe comparison, single-use codes
+deleted inside the verify transaction, a five-attempt brute-force cap, a
+60-second resend cooldown, 10-minute expiry, and client-side access to the OTP
+collection blocked by rules.
 
 > **v0.1** — first publish. API may still change; breaking changes allowed until 1.0.
 
@@ -33,10 +33,12 @@ rules.
 
    ```typescript
    // callable/requestEmailOtp.ts
+   import { defineSecret } from "firebase-functions/params";
    import { createRequestEmailOtp } from "@guettonenrique/passwordless-auth/functions";
 
    exports.requestEmailOtp = createRequestEmailOtp({
      appName: "MyApp",
+     secret: defineSecret("OTP_SECRET"),
      enforceAppCheck: false, // flip to true in production once App Check is set up
      sendgrid: {
        apiKey: defineSecret("SENDGRID_API_KEY"),
@@ -52,9 +54,11 @@ rules.
 
    ```typescript
    // callable/verifyEmailOtp.ts
+   import { defineSecret } from "firebase-functions/params";
    import { createVerifyEmailOtp } from "@guettonenrique/passwordless-auth/functions";
 
    exports.verifyEmailOtp = createVerifyEmailOtp({
+     secret: defineSecret("OTP_SECRET"),
      enforceAppCheck: false, // flip to true in production once App Check is set up
      provision: async (email) => {
        // Your user provisioning schema.
@@ -159,11 +163,11 @@ constants and validation, but it is not required by the client.
 
 Three factory functions return ready-to-deploy Firebase Cloud Functions:
 
-| Factory                    | What it handles                                                                                                                                                                                                           |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createRequestEmailOtp`    | Email validation, 60 s resend cooldown, cryptographically secure 6-digit code generation, SHA-256 hashing (`email:code`), Firestore write, email dispatch (SendGrid default or custom sender), structured error responses |
-| `createVerifyEmailOtp`     | Code lookup, timing-safe hash comparison, expiry check, 5-attempt brute-force cap, single-use deletion inside a Firestore transaction, user provisioning (delegated to your hook), Firebase custom token minting          |
-| `createCleanupExpiredOtps` | Scheduled (every 15 min) drain-loop that deletes orphaned OTP docs (users who requested but never entered a code)                                                                                                         |
+| Factory                    | What it handles                                                                                                                                                                                                               |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createRequestEmailOtp`    | Email validation, 60 s resend cooldown, cryptographically secure 6-digit code generation, HMAC-SHA256 hashing (`email:code`), Firestore write, email dispatch (SendGrid default or custom sender), structured error responses |
+| `createVerifyEmailOtp`     | Code lookup, timing-safe hash comparison, expiry check, 5-attempt brute-force cap, single-use deletion inside a Firestore transaction, user provisioning (delegated to your hook), Firebase custom token minting              |
+| `createCleanupExpiredOtps` | Scheduled (every 15 min) drain-loop that deletes orphaned OTP docs (users who requested but never entered a code)                                                                                                             |
 
 ### Mobile (`/react-native`)
 
@@ -185,7 +189,7 @@ contracts in sync.
 
 ### Security model
 
-- Codes are SHA-256 hashed before storage — plaintext never touches Firestore
+- Codes are HMAC-SHA256 hashed with a server-side secret before storage — plaintext never touches Firestore
 - Timing-safe comparison prevents hash-timing attacks
 - Single-use: the doc is deleted inside the verify transaction (concurrent verifies → one winner)
 - 5-attempt cap per code, then the doc is destroyed
@@ -219,16 +223,15 @@ Install the peer packages required by the entry point you use (kept out of top-l
 import { defineSecret } from "firebase-functions/params";
 import { createRequestEmailOtp } from "@guettonenrique/passwordless-auth/functions";
 
+const otpSecret = defineSecret("OTP_SECRET");
 const sendgridKey = defineSecret("SENDGRID_API_KEY");
 
 exports.requestEmailOtp = createRequestEmailOtp({
   appName: "MyApp",
+  secret: otpSecret, // a params Secret works directly and is auto-bound on the function
   enforceAppCheck: false, // flip to true in production once App Check is set up
-  // ⚠️ register the secret on the function so the runtime can resolve it:
-  // pass `secrets: [sendgridKey]` via onCall options if your deployment
-  // requires it — see "Secrets" below.
   sendgrid: {
-    apiKey: sendgridKey, // a params Secret works directly
+    apiKey: sendgridKey, // a params Secret works directly and is auto-bound on the function
     fromEmail: "no-reply@yourdomain.com",
     fromName: "MyApp Support",
   },
@@ -237,8 +240,11 @@ exports.requestEmailOtp = createRequestEmailOtp({
 
 ```typescript
 // callable/verifyEmailOtp.ts
+import { defineSecret } from "firebase-functions/params";
 import { createVerifyEmailOtp } from "@guettonenrique/passwordless-auth/functions";
 import { resolveOrCreateUser } from "../utils/yourUserProvisioning";
+
+const otpSecret = defineSecret("OTP_SECRET");
 
 // The one project-specific hook: resolve or create the user, return the uid.
 const provision = async (email: string): Promise<string> => {
@@ -247,6 +253,7 @@ const provision = async (email: string): Promise<string> => {
 };
 
 exports.verifyEmailOtp = createVerifyEmailOtp({
+  secret: otpSecret,
   enforceAppCheck: false, // flip to true in production once App Check is set up
   provision,
 });
@@ -260,12 +267,13 @@ import { createCleanupExpiredOtps } from "@guettonenrique/passwordless-auth/func
 exports.cleanupExpiredOtps = createCleanupExpiredOtps();
 ```
 
-`apiKey` accepts a `defineSecret(...)` object directly — the factory resolves
-it per call, which is what makes Firebase secrets work.
+`secret` and `apiKey` accept a `defineSecret(...)` object directly — the
+factory resolves them per call, which is what makes Firebase secrets work.
 
-**Secrets:** declare `SENDGRID_API_KEY` in your `firebase.json` (or use
-`firebase functions:secrets:set SENDGRID_API_KEY`) and reference it with
-`defineSecret`. The factory reads it through the params API at request time.
+**Secrets:** declare `OTP_SECRET` (and `SENDGRID_API_KEY`) in your
+`firebase.json` (or use `firebase functions:secrets:set OTP_SECRET`) and
+reference them with `defineSecret`. Both `createRequestEmailOtp` and
+`createVerifyEmailOtp` must receive the same `OTP_SECRET`.
 
 ### 2. Lock the OTP collection in Firestore rules
 
@@ -283,15 +291,16 @@ firebase deploy --only functions,firestore:rules
 
 ### Options (all optional, sane defaults)
 
-| Option               | Default              | Notes                                                                       |
-| -------------------- | -------------------- | --------------------------------------------------------------------------- |
-| `collection`         | `'auth_otps'`        | same value must be used on all three factories                              |
-| `cooldownMs`         | `60_000`             | resend rate limit                                                           |
-| `expiryMs`           | `600_000`            | code lifetime (10 min)                                                      |
-| `maxAttempts`        | `5`                  | brute-force cap per code                                                    |
-| `enforceAppCheck`    | `false`              | flip to `true` in production (see below)                                    |
-| `sendEmail`          | SendGrid sender      | custom `(email: OtpEmail) => Promise<void>` to swap providers or log in dev |
-| `schedule` (cleanup) | `'every 15 minutes'` | Cloud Scheduler syntax                                                      |
+| Option               | Default               | Notes                                                                                                  |
+| -------------------- | --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `secret`             | `undefined` (SHA-256) | HMAC-SHA256 secret (`string`, getter, or `defineSecret('OTP_SECRET')`); must match on request & verify |
+| `collection`         | `'auth_otps'`         | same value must be used on all three factories                                                         |
+| `cooldownMs`         | `60_000`              | resend rate limit                                                                                      |
+| `expiryMs`           | `600_000`             | code lifetime (10 min)                                                                                 |
+| `maxAttempts`        | `5`                   | brute-force cap per code                                                                               |
+| `enforceAppCheck`    | `false`               | flip to `true` in production (see below)                                                               |
+| `sendEmail`          | SendGrid sender       | custom `(email: OtpEmail) => Promise<void>` to swap providers or log in dev                            |
+| `schedule` (cleanup) | `'every 15 minutes'`  | Cloud Scheduler syntax                                                                                 |
 
 **App Check:** start with `enforceAppCheck: false` while wiring up, then enable
 it in production once your app ships App Check (React Native: `@react-native-firebase/app-check`).

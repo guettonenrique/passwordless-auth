@@ -55,19 +55,37 @@ export interface OtpEmailInput {
   expiresMinutes: number;
 }
 
+/**
+ * A secret resolved per call. Accepts a plain string, a getter function
+ * (`defineSecret('X').value`), or a Firebase params Secret object
+ * (`defineSecret('X')`) directly.
+ */
+export type SecretInput =
+  | string
+  | (() => string)
+  | { name?: string; value: () => string };
+
 export interface SendgridSenderOptions {
   /**
    * The API key, resolved per call. Accepts a plain string, a getter
    * function (`defineSecret('X').value`), or a Firebase params Secret
    * object (`defineSecret('X')`) directly.
    */
-  apiKey: string | (() => string) | { value: () => string };
+  apiKey: SecretInput;
   fromEmail: string;
   fromName: string;
 }
 
 /** Base options shared by the request/verify factories. */
 export interface BaseOtpOptions {
+  /**
+   * Server-side HMAC-SHA256 secret used to hash OTP codes before storage.
+   * When provided, codes are hashed with `HMAC-SHA256` (must match across
+   * `createRequestEmailOtp` and `createVerifyEmailOtp`). When omitted, falls
+   * back to plain `SHA-256`. Accepts a plain string, a getter function, or
+   * `defineSecret('OTP_SECRET')`.
+   */
+  secret?: SecretInput;
   /** Firestore collection holding pending OTPs. Default: `auth_otps`. */
   collection?: string;
   /** Resend cooldown in ms. Default: 60_000. */
@@ -115,7 +133,7 @@ export interface CleanupOtpOptions {
 // ============================================================================
 
 export interface OtpDocumentData {
-  /** SHA-256 hex of `email:code`. The plaintext code is never stored. */
+  /** HMAC-SHA256 hex of `email:code`. The plaintext code is never stored. */
   hash: string;
   /** Failed guess counter. */
   attempts: number;
