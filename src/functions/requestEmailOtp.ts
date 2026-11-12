@@ -25,6 +25,7 @@ import { createSendgridSender } from './senders/sendgrid';
  * ```ts
  * exports.requestEmailOtp = createRequestEmailOtp({
  *   appName: 'MyApp',
+ *   secret: defineSecret('OTP_SECRET'),
  *   sendgrid: { apiKey: defineSecret('SENDGRID_API_KEY'), fromEmail, fromName },
  * });
  * ```
@@ -87,7 +88,7 @@ export function createRequestEmailOtp(options: RequestOtpOptions) {
       }
 
       const code = generateOtpCode(CODE_LENGTH);
-      const codeHash = hashOtpCode(email, code);
+      const codeHash = hashOtpCode(email, code, options.secret);
 
       await otpDocRef.set({
         hash: codeHash,

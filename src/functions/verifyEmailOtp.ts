@@ -23,6 +23,7 @@ import { hashOtpCode, isOtpHashMatch } from './crypto';
  *
  * ```ts
  * exports.verifyEmailOtp = createVerifyEmailOtp({
+ *   secret: defineSecret('OTP_SECRET'),
  *   provision: async (email) => {
  *     const { user } = await resolveOrCreateUser(email, { emailVerified: true });
  *     return user.uid;
@@ -110,7 +111,10 @@ export function createVerifyEmailOtp(options: VerifyOtpOptions) {
         }
 
         // 3. Timing-safe hash validation
-        const isMatch = isOtpHashMatch(otpData?.hash || '', hashOtpCode(email, code));
+        const isMatch = isOtpHashMatch(
+          otpData?.hash || '',
+          hashOtpCode(email, code, options.secret)
+        );
 
         if (!isMatch) {
           const newAttempts = currentAttempts + 1;

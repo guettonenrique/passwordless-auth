@@ -31,10 +31,18 @@ const invoke = (fn: Handler, data: unknown) =>
 const call = async (fn: Handler, data: unknown): Promise<VerifyOtpResponse | HttpsError> =>
   invoke(fn, data).catch((e: unknown) => e as HttpsError);
 
-function seedOtpDoc(mock: MockFirestore, email: string, code: string, overrides: Record<string, unknown> = {}) {
+const TEST_SECRET = 'test-otp-secret';
+
+function seedOtpDoc(
+  mock: MockFirestore,
+  email: string,
+  code: string,
+  overrides: Record<string, unknown> = {},
+  secret: string = TEST_SECRET
+) {
   const now = Date.now();
   mock.store.set(`auth_otps/${email}`, {
-    hash: hashOtpCode(email, code),
+    hash: hashOtpCode(email, code, secret),
     attempts: 0,
     expiresAt: now + 600_000,
     lastSentAt: now,
@@ -52,7 +60,7 @@ describe('createVerifyEmailOtp', () => {
     provision.mockClear();
   });
 
-  const handler: Handler = createVerifyEmailOtp({ provision });
+  const handler: Handler = createVerifyEmailOtp({ secret: TEST_SECRET, provision });
 
   it('verifies a correct code: deletes doc, provisions user, mints token', async () => {
     const code = '424242';
@@ -132,6 +140,21 @@ describe('createVerifyEmailOtp', () => {
     seedOtpDoc(mock, 'a@b.com', code);
 
     const res = await invoke(handler, { email: 'a@b.com', code });
+    expect(res.status).toBe('success');
+  });
+
+  it('falls back to plain SHA-256 verification when secret is omitted', async () => {
+    const code = '654321';
+    const now = Date.now();
+    mock.store.set('auth_otps/a@b.com', {
+      hash: hashOtpCode('a@b.com', code),
+      attempts: 0,
+      expiresAt: now + 600_000,
+      lastSentAt: now,
+    });
+
+    const fallbackHandler = createVerifyEmailOtp({ provision });
+    const res = await invoke(fallbackHandler, { email: 'a@b.com', code });
     expect(res.status).toBe('success');
   });
 });

@@ -1,5 +1,5 @@
-import { randomInt, createHash, timingSafeEqual } from 'node:crypto';
-import { CODE_LENGTH } from '../shared';
+import { randomInt, createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { CODE_LENGTH, type SecretInput } from '../shared';
 
 /**
  * Node-only crypto helpers. These live in the `functions` entry (not `shared`)
@@ -7,14 +7,36 @@ import { CODE_LENGTH } from '../shared';
  * React Native entry.
  */
 
+/** Resolves a `SecretInput` (plain string, getter, or Firebase `defineSecret`) at call time. */
+export function resolveSecret(secret: SecretInput): string {
+  const value =
+    typeof secret === 'string'
+      ? secret
+      : typeof secret === 'function'
+        ? secret()
+        : secret?.value?.();
+
+  if (!value || typeof value !== 'string') {
+    throw new Error('OTP secret must resolve to a non-empty string.');
+  }
+  return value;
+}
+
 /** Generates a cryptographically secure numeric code of `length` digits. */
 export function generateOtpCode(length: number = CODE_LENGTH): string {
   return randomInt(10 ** (length - 1), 10 ** length).toString();
 }
 
-/** SHA-256 hex digest of `email:code` — the value stored in Firestore. */
-export function hashOtpCode(email: string, code: string): string {
-  return createHash('sha256').update(`${email}:${code}`).digest('hex');
+/**
+ * Hex digest of `email:code` — the value stored in Firestore.
+ * Uses `HMAC-SHA256` keyed with `secret` when provided; falls back to `SHA-256` when omitted.
+ */
+export function hashOtpCode(email: string, code: string, secret?: SecretInput): string {
+  const payload = `${email}:${code}`;
+  if (secret !== undefined) {
+    return createHmac('sha256', resolveSecret(secret)).update(payload).digest('hex');
+  }
+  return createHash('sha256').update(payload).digest('hex');
 }
 
 /** Timing-safe comparison of two hex digests. */

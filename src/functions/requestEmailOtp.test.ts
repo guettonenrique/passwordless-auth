@@ -37,6 +37,8 @@ const invoke = (fn: Handler, data: unknown) =>
 const call = async (fn: Handler, data: unknown): Promise<RequestOtpResponse | HttpsError> =>
   invoke(fn, data).catch((e: unknown) => e as HttpsError);
 
+const TEST_SECRET = 'test-otp-secret';
+
 describe('createRequestEmailOtp', () => {
   let mock: MockFirestore;
   const sentEmails: OtpEmail[] = [];
@@ -52,7 +54,7 @@ describe('createRequestEmailOtp', () => {
   });
 
   const factory = (extra: Partial<RequestOtpOptions> = {}) =>
-    createRequestEmailOtp({ appName: 'TestApp', sendEmail, ...extra });
+    createRequestEmailOtp({ appName: 'TestApp', secret: TEST_SECRET, sendEmail, ...extra });
 
   it('writes a valid OTP doc and delivers the composed email', async () => {
     const res = await invoke(factory(), { email: ' User@Example.com ' });
@@ -74,7 +76,7 @@ describe('createRequestEmailOtp', () => {
     expect(codeMatch).not.toBeNull();
     const code = codeMatch![1]!;
     expect(code).toHaveLength(6);
-    expect(doc!.hash).toBe(hashOtpCode('user@example.com', code));
+    expect(doc!.hash).toBe(hashOtpCode('user@example.com', code, TEST_SECRET));
     expect(sentEmails[0]!.to).toBe('user@example.com');
     expect(sentEmails[0]!.html).toContain(code);
   });
@@ -125,6 +127,7 @@ describe('createRequestEmailOtp', () => {
   it('deletes the doc and throws internal when delivery fails', async () => {
     const failing = createRequestEmailOtp({
       appName: 'TestApp',
+      secret: TEST_SECRET,
       sendEmail: async () => {
         throw new Error('sendgrid down');
       },
@@ -134,6 +137,17 @@ describe('createRequestEmailOtp', () => {
     expect(err).toBeInstanceOf(HttpsError);
     expect((err as HttpsError).code).toBe(OTP_ERROR_CODES.Internal);
     expect(mock.store.has('auth_otps/a@b.com')).toBe(false);
+  });
+
+  it('falls back to plain SHA-256 when secret is omitted', async () => {
+    const noSecretFactory = createRequestEmailOtp({ appName: 'TestApp', sendEmail });
+    await invoke(noSecretFactory, { email: 'a@b.com' });
+
+    const doc = mock.store.get('auth_otps/a@b.com');
+    const codeMatch = /code is (\d{6})$/.exec(sentEmails[0]!.subject);
+    const code = codeMatch![1]!;
+    expect(doc!.hash).toBe(hashOtpCode('a@b.com', code));
+    expect(doc!.hash).not.toBe(hashOtpCode('a@b.com', code, TEST_SECRET));
   });
 
   it('fails fast at factory time when neither sendgrid nor sendEmail is given', () => {

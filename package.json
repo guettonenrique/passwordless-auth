@@ -1,6 +1,6 @@
 {
   "name": "@guettonenrique/passwordless-auth",
-  "version": "0.1.2",
+  "version": "0.1.3-beta.0",
   "description": "Passwordless email-OTP authentication: Firebase Cloud Function factories + React Native API and UI. One package, two entries, zero shared runtime deps.",
   "license": "MIT",
   "type": "module",
