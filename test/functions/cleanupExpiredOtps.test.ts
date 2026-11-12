@@ -9,8 +9,8 @@ vi.mock('firebase-admin/firestore', () => {
   };
 });
 
-import { createCleanupExpiredOtps } from './cleanupExpiredOtps';
-import type { CleanupOtpOptions } from '../shared';
+import { createCleanupExpiredOtps } from '../../src/functions/cleanupExpiredOtps';
+import type { CleanupOtpOptions } from '../../src/shared';
 
 const EVENT: ScheduledEvent = { scheduleTime: new Date().toISOString() };
 

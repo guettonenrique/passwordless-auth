@@ -27,7 +27,7 @@ vi.mock('@react-native-firebase/auth', () => ({
   signInWithCustomToken: mocks.signInWithCustomToken,
 }));
 
-import { requestEmailOtp, verifyEmailOtp, signInWithEmailOtp } from './api';
+import { requestEmailOtp, verifyEmailOtp, signInWithEmailOtp } from '../../src/react-native/api';
 
 beforeEach(() => {
   vi.clearAllMocks();

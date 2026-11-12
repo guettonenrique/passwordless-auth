@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOtpEmail } from './email-template';
+import { buildOtpEmail } from '../../src/shared/email-template';
 
 const baseInput = {
   to: 'user@example.com',

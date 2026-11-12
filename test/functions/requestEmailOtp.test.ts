@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpsError, type CallableFunction, type CallableRequest } from 'firebase-functions/https';
 import { createMockFirestore, installFirestoreMock, type MockFirestore } from './test-mocks';
-import { hashOtpCode } from './crypto';
+import { hashOtpCode } from '../../src/functions/crypto';
 
 vi.mock('firebase-admin/firestore', () => {
   const g = globalThis as unknown as { __mockFirestore: MockFirestore };
@@ -17,14 +17,14 @@ const sendgridMocks = vi.hoisted(() => ({
 }));
 vi.mock('@sendgrid/mail', () => ({ default: sendgridMocks }));
 
-import { createRequestEmailOtp } from './requestEmailOtp';
+import { createRequestEmailOtp } from '../../src/functions/requestEmailOtp';
 import {
   OTP_ERROR_CODES,
   type OtpEmail,
   type RequestOtpOptions,
   type RequestOtpPayload,
   type RequestOtpResponse,
-} from '../shared';
+} from '../../src/shared';
 
 const NOW = Date.now();
 
@@ -157,7 +157,7 @@ describe('createRequestEmailOtp', () => {
   });
 
   it('resolves the sendgrid key from string, getter, and params Secret forms', async () => {
-    const { createSendgridSender } = await import('./senders/sendgrid');
+    const { createSendgridSender } = await import('../../src/functions/senders/sendgrid');
     const email = { to: 'a@b.com', subject: 's', text: 't', html: 'h' };
 
     await createSendgridSender({ apiKey: 'plain-key', fromEmail: 'f@x.com', fromName: 'F' })(email);

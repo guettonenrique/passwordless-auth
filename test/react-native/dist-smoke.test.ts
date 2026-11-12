@@ -32,7 +32,7 @@ vi.mock('@react-native-firebase/auth', () => ({
   signInWithCustomToken: async () => ({}),
 }));
 
-// cwd-independent: resolved relative to this file (src/react-native/ → ../../dist)
+// cwd-independent: resolved relative to this file (test/react-native/ → ../../dist)
 const distRoot = new URL('../../dist/', import.meta.url).pathname;
 const hasDist =
   existsSync(`${distRoot}react-native/index.js`) && existsSync(`${distRoot}functions/index.cjs`);

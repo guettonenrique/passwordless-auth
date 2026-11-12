@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeEmail, isValidEmail, isOtpCode, cooldownMessage, attemptsMessage } from './utils';
+import {
+  normalizeEmail,
+  isValidEmail,
+  isOtpCode,
+  cooldownMessage,
+  attemptsMessage,
+} from '../../src/shared/utils';
 
 describe('normalizeEmail', () => {
   it('trims and lowercases', () => {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpsError, type CallableFunction, type CallableRequest } from 'firebase-functions/https';
 import { createMockFirestore, installFirestoreMock, type MockFirestore } from './test-mocks';
-import { generateOtpCode, hashOtpCode } from './crypto';
+import { generateOtpCode, hashOtpCode } from '../../src/functions/crypto';
 
 vi.mock('firebase-admin/firestore', () => {
   const g = globalThis as unknown as { __mockFirestore: MockFirestore };
@@ -16,12 +16,12 @@ vi.mock('firebase-admin/auth', () => ({
   }),
 }));
 
-import { createVerifyEmailOtp } from './verifyEmailOtp';
+import { createVerifyEmailOtp } from '../../src/functions/verifyEmailOtp';
 import {
   OTP_ERROR_CODES,
   type VerifyOtpPayload,
   type VerifyOtpResponse,
-} from '../shared';
+} from '../../src/shared';
 
 type Handler = CallableFunction<VerifyOtpPayload, Promise<VerifyOtpResponse>>;
 

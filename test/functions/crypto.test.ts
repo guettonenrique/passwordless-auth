@@ -4,7 +4,7 @@ import {
   generateOtpCode,
   hashOtpCode,
   isOtpHashMatch,
-} from './crypto';
+} from '../../src/functions/crypto';
 
 describe('generateOtpCode', () => {
   it('produces exactly 6 digits in [100000, 999999]', () => {

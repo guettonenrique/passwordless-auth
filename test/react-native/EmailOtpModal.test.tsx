@@ -7,7 +7,7 @@ import TestRenderer, {
 } from 'react-test-renderer';
 import { TouchableOpacity, TextInput } from 'react-native';
 
-vi.mock('./api', () => ({
+vi.mock('../../src/react-native/api', () => ({
   requestEmailOtp: vi.fn(async () => ({ status: 'success', message: 'Verification code sent.' })),
   signInWithEmailOtp: vi.fn(async () => undefined),
   verifyEmailOtp: vi.fn(async () => 'tok'),
@@ -24,8 +24,8 @@ vi.mock('lucide-react-native', () => ({
   ArrowLeft: () => null,
 }));
 
-import { EmailOtpModal } from './EmailOtpModal';
-import { requestEmailOtp, signInWithEmailOtp } from './api';
+import { EmailOtpModal } from '../../src/react-native/EmailOtpModal';
+import { requestEmailOtp, signInWithEmailOtp } from '../../src/react-native/api';
 
 let renderer: ReactTestRenderer | undefined;
 
