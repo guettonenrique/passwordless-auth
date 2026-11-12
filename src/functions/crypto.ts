@@ -22,6 +22,34 @@ export function resolveSecret(secret: SecretInput): string {
   return value;
 }
 
+/**
+ * Extracts Firebase `SecretParam` objects (identified by a non-empty `name`
+ * string and a `value()` method) so `onCall` can declare them in `secrets`
+ * and have Google Cloud mount them into the function container at deploy time.
+ */
+export function collectSecretParams(
+  ...inputs: (SecretInput | undefined)[]
+): { name: string; value: () => string }[] {
+  const seen = new Set<string>();
+  const params: { name: string; value: () => string }[] = [];
+
+  for (const input of inputs) {
+    if (
+      typeof input === 'object' &&
+      input !== null &&
+      typeof input.name === 'string' &&
+      input.name.length > 0 &&
+      typeof input.value === 'function' &&
+      !seen.has(input.name)
+    ) {
+      seen.add(input.name);
+      params.push(input as { name: string; value: () => string });
+    }
+  }
+
+  return params;
+}
+
 /** Generates a cryptographically secure numeric code of `length` digits. */
 export function generateOtpCode(length: number = CODE_LENGTH): string {
   return randomInt(10 ** (length - 1), 10 ** length).toString();

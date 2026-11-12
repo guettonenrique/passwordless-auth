@@ -188,4 +188,21 @@ describe('createRequestEmailOtp', () => {
     expect(doc!.expiresAt).toBe(customLastSentAt + 300_000);
     expect(sentEmails[0]!.html).toContain('5 minutes');
   });
+
+  it('auto-binds Firebase SecretParam objects from secret and sendgrid.apiKey onto onCall options', () => {
+    const fn = createRequestEmailOtp({
+      appName: 'TestApp',
+      secret: { name: 'CUSTOM_OTP_HMAC', value: () => TEST_SECRET },
+      sendgrid: {
+        apiKey: { name: 'SENDGRID_API_KEY', value: () => 'sg-key' },
+        fromEmail: 'f@x.com',
+        fromName: 'F',
+      },
+    }) as unknown as { __endpoint?: { secretEnvironmentVariables?: { key: string }[] } };
+
+    expect(fn.__endpoint?.secretEnvironmentVariables).toEqual([
+      { key: 'CUSTOM_OTP_HMAC' },
+      { key: 'SENDGRID_API_KEY' },
+    ]);
+  });
 });

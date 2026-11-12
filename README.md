@@ -228,13 +228,10 @@ const sendgridKey = defineSecret("SENDGRID_API_KEY");
 
 exports.requestEmailOtp = createRequestEmailOtp({
   appName: "MyApp",
-  secret: otpSecret, // a params Secret works directly
+  secret: otpSecret, // a params Secret works directly and is auto-bound on the function
   enforceAppCheck: false, // flip to true in production once App Check is set up
-  // ⚠️ register the secrets on the function so the runtime can resolve them:
-  // pass `secrets: [otpSecret, sendgridKey]` via onCall options if your deployment
-  // requires it — see "Secrets" below.
   sendgrid: {
-    apiKey: sendgridKey, // a params Secret works directly
+    apiKey: sendgridKey, // a params Secret works directly and is auto-bound on the function
     fromEmail: "no-reply@yourdomain.com",
     fromName: "MyApp Support",
   },

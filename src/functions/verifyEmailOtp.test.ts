@@ -157,4 +157,15 @@ describe('createVerifyEmailOtp', () => {
     const res = await invoke(fallbackHandler, { email: 'a@b.com', code });
     expect(res.status).toBe('success');
   });
+
+  it('auto-binds Firebase SecretParam objects from secret onto onCall options', () => {
+    const fn = createVerifyEmailOtp({
+      secret: { name: 'CUSTOM_OTP_HMAC', value: () => TEST_SECRET },
+      provision,
+    }) as unknown as { __endpoint?: { secretEnvironmentVariables?: { key: string }[] } };
+
+    expect(fn.__endpoint?.secretEnvironmentVariables).toEqual([
+      { key: 'CUSTOM_OTP_HMAC' },
+    ]);
+  });
 });

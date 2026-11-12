@@ -60,7 +60,10 @@ export interface OtpEmailInput {
  * (`defineSecret('X').value`), or a Firebase params Secret object
  * (`defineSecret('X')`) directly.
  */
-export type SecretInput = string | (() => string) | { value: () => string };
+export type SecretInput =
+  | string
+  | (() => string)
+  | { name?: string; value: () => string };
 
 export interface SendgridSenderOptions {
   /**

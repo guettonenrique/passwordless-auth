@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { generateOtpCode, hashOtpCode, isOtpHashMatch } from './crypto';
+import {
+  collectSecretParams,
+  generateOtpCode,
+  hashOtpCode,
+  isOtpHashMatch,
+} from './crypto';
 
 describe('generateOtpCode', () => {
   it('produces exactly 6 digits in [100000, 999999]', () => {
@@ -73,5 +78,25 @@ describe('isOtpHashMatch', () => {
   it('rejects length mismatches without throwing', () => {
     expect(isOtpHashMatch('ab', 'abcd')).toBe(false);
     expect(isOtpHashMatch('', '')).toBe(true);
+  });
+});
+
+describe('collectSecretParams', () => {
+  it('extracts deduplicated Firebase SecretParam objects and ignores strings/getters', () => {
+    const otpSecret = { name: 'OTP_SECRET', value: () => 's1' };
+    const sgSecret = { name: 'SENDGRID_API_KEY', value: () => 's2' };
+    const unnamed = { value: () => 's3' };
+
+    const result = collectSecretParams(
+      undefined,
+      'plain',
+      () => 'getter',
+      unnamed,
+      otpSecret,
+      sgSecret,
+      otpSecret
+    );
+
+    expect(result).toEqual([otpSecret, sgSecret]);
   });
 });

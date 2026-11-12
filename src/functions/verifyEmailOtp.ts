@@ -14,7 +14,7 @@ import {
   type VerifyOtpPayload,
   type VerifyOtpResponse,
 } from '../shared';
-import { hashOtpCode, isOtpHashMatch } from './crypto';
+import { collectSecretParams, hashOtpCode, isOtpHashMatch } from './crypto';
 
 /**
  * Factory for the `verifyEmailOtp` callable.
@@ -34,10 +34,12 @@ import { hashOtpCode, isOtpHashMatch } from './crypto';
 export function createVerifyEmailOtp(options: VerifyOtpOptions) {
   const collection = options.collection ?? DEFAULT_COLLECTION;
   const maxAttempts = options.maxAttempts ?? MAX_ATTEMPTS;
+  const secrets = collectSecretParams(options.secret);
 
   return onCall<VerifyOtpPayload, Promise<VerifyOtpResponse>>(
     {
       enforceAppCheck: options.enforceAppCheck ?? false,
+      ...(secrets.length > 0 ? { secrets: secrets.map((s) => s.name) } : {}),
     },
     async (request) => {
       const rawEmail = request.data?.email;
