@@ -74,33 +74,45 @@ export function createRequestEmailOtp(options: RequestOtpOptions) {
 
       const db = getFirestore();
       const otpDocRef = db.collection(collection).doc(email);
-      const existingSnap = await otpDocRef.get();
 
-      const now = Date.now();
+      let code = '';
+      let codeHash = '';
+      let cooldownError: HttpsError | null = null;
 
-      // Enforce the resend cooldown
-      if (existingSnap.exists) {
-        const data = existingSnap.data();
-        const lastSentAt = data?.lastSentAt || 0;
-        const elapsed = now - lastSentAt;
-        if (elapsed < cooldownMs) {
-          throw new HttpsError(
-            OTP_ERROR_CODES.ResourceExhausted,
-            cooldownMessage(cooldownMs - elapsed)
-          );
+      await db.runTransaction(async (transaction) => {
+        cooldownError = null;
+        const existingSnap = await transaction.get(otpDocRef);
+        const now = Date.now();
+
+        // Enforce the resend cooldown atomically
+        if (existingSnap.exists) {
+          const data = existingSnap.data();
+          const lastSentAt = data?.lastSentAt || 0;
+          const elapsed = now - lastSentAt;
+          if (elapsed < cooldownMs) {
+            cooldownError = new HttpsError(
+              OTP_ERROR_CODES.ResourceExhausted,
+              cooldownMessage(cooldownMs - elapsed)
+            );
+            return;
+          }
         }
-      }
 
-      const code = generateOtpCode(CODE_LENGTH);
-      const codeHash = hashOtpCode(email, code, options.secret);
+        code = generateOtpCode(CODE_LENGTH);
+        codeHash = hashOtpCode(email, code, options.secret);
 
-      await otpDocRef.set({
-        hash: codeHash,
-        attempts: 0,
-        expiresAt: now + expiryMs,
-        lastSentAt: now,
-        createdAt: FieldValue.serverTimestamp(),
+        transaction.set(otpDocRef, {
+          hash: codeHash,
+          attempts: 0,
+          expiresAt: now + expiryMs,
+          lastSentAt: now,
+          createdAt: FieldValue.serverTimestamp(),
+        });
       });
+
+      if (cooldownError) {
+        throw cooldownError;
+      }
 
       const composed = buildOtpEmail({
         to: email,
@@ -113,8 +125,15 @@ export function createRequestEmailOtp(options: RequestOtpOptions) {
         await sendEmail(composed);
       } catch (err) {
         console.error('Failed to send OTP email:', err);
-        // Clean up the created OTP document if delivery fails
-        await otpDocRef.delete().catch(() => null);
+        // Clean up the created OTP document only if it has not been replaced by a newer request
+        await db
+          .runTransaction(async (transaction) => {
+            const snap = await transaction.get(otpDocRef);
+            if (snap.exists && snap.data()?.hash === codeHash) {
+              transaction.delete(otpDocRef);
+            }
+          })
+          .catch(() => null);
         throw new HttpsError(
           OTP_ERROR_CODES.Internal,
           'Failed to deliver verification code email. Please try again.'
