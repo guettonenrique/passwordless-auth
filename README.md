@@ -77,16 +77,20 @@ collection blocked by rules.
    exports.cleanupExpiredOtps = createCleanupExpiredOtps();
    ```
 
-3. **Lock down the OTP collection** in `firestore.rules`:
+3. **REQUIRED — Lock down the OTP collection** in your Firestore rules:
+
+   > [!CAUTION]
+   > **Required for security.** Because Cloud Functions use the Admin SDK, clients never need access to `auth_otps` (or your custom `collection`). Leaving this collection readable or writable to clients is a critical security risk. This package has no access to deploying Firestore rules, so this crucial step is your responsibility.
 
    ```javascript
    // Auth OTP documents are maintained exclusively by backend Cloud Functions.
+   // Users don't need any kind of access to this collection.
    match /auth_otps/{document=**} {
      allow read, write: if false;
    }
    ```
 
-4. **Deploy**: `firebase deploy --only functions,firestore:rules`
+4. **Deploy both functions and rules**: `firebase deploy --only functions,firestore:rules`
 
 ### Mobile
 
@@ -193,8 +197,8 @@ contracts in sync.
 - Timing-safe comparison prevents hash-timing attacks
 - Single-use: the doc is deleted inside the verify transaction (concurrent verifies → one winner)
 - 5-attempt cap per code, then the doc is destroyed
-- 60-second resend cooldown, 10-minute code expiry
-- Client-side access to the OTP collection is blocked by Firestore rules (only admin SDK writes)
+- Atomic 60-second resend cooldown (enforced inside a Firestore transaction), 10-minute code expiry, and hash-verified cleanup on delivery failure
+- **Required Firestore rule**: the consuming project must block all client-side access to the OTP collection in `firestore.rules` (only the Admin SDK in Cloud Functions should ever read or write it)
 - App Check enforcement is a one-flag option (`enforceAppCheck: true`)
 
 ---
@@ -275,15 +279,22 @@ factory resolves them per call, which is what makes Firebase secrets work.
 reference them with `defineSecret`. Both `createRequestEmailOtp` and
 `createVerifyEmailOtp` must receive the same `OTP_SECRET`.
 
-### 2. Lock the OTP collection in Firestore rules
+### 2. REQUIRED: Lock the OTP collection in Firestore rules
+
+> [!CAUTION]
+> **Required for security.** Because Cloud Functions use the Admin SDK (which bypasses Security Rules), clients never need access to `auth_otps` (or your custom `collection`). Leaving this collection readable or writable to clients is a critical security risk. This package has no access to deploying Firestore rules, so this crucial step is your responsibility.
+>
+> **Watch out for wildcard rules:** Firestore evaluates overlapping `match` blocks with `OR` logic (`allow` always wins over `if false`). If your `firestore.rules` contains a broad catch-all rule such as `match /{document=**} { allow read, write: if request.auth != null; }`, adding `allow read, write: if false;` on `/auth_otps/{document=**}` will **not** block authenticated users — you must remove the catch-all rule or explicitly exclude `auth_otps` in its condition.
 
 ```javascript
+// Auth OTP documents are maintained exclusively by backend Cloud Functions.
+// Users don't need any kind of access to this collection.
 match /auth_otps/{document=**} {
-  allow read, write: if false;   // only the Cloud Functions (admin SDK) may touch it
+  allow read, write: if false;
 }
 ```
 
-### 3. Deploy
+### 3. Deploy functions and Firestore rules
 
 ```bash
 firebase deploy --only functions,firestore:rules

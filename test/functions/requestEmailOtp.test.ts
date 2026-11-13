@@ -124,6 +124,25 @@ describe('createRequestEmailOtp', () => {
     expect(sentEmails).toHaveLength(1);
   });
 
+  it('enforces the resend cooldown atomically across concurrent requests', async () => {
+    const fn = factory();
+    const results = await Promise.all([
+      call(fn, { email: 'a@b.com' }),
+      call(fn, { email: 'a@b.com' }),
+      call(fn, { email: 'a@b.com' }),
+    ]);
+
+    const successes = results.filter((r) => !(r instanceof HttpsError));
+    const errors = results.filter((r): r is HttpsError => r instanceof HttpsError);
+
+    expect(successes).toHaveLength(1);
+    expect(errors).toHaveLength(2);
+    for (const err of errors) {
+      expect(err.code).toBe(OTP_ERROR_CODES.ResourceExhausted);
+    }
+    expect(sentEmails).toHaveLength(1);
+  });
+
   it('deletes the doc and throws internal when delivery fails', async () => {
     const failing = createRequestEmailOtp({
       appName: 'TestApp',
@@ -137,6 +156,33 @@ describe('createRequestEmailOtp', () => {
     expect(err).toBeInstanceOf(HttpsError);
     expect((err as HttpsError).code).toBe(OTP_ERROR_CODES.Internal);
     expect(mock.store.has('auth_otps/a@b.com')).toBe(false);
+  });
+
+  it('does not delete a newer OTP doc when a stale delivery fails', async () => {
+    const newerHash = hashOtpCode('a@b.com', '999999', TEST_SECRET);
+    const staleFailure = createRequestEmailOtp({
+      appName: 'TestApp',
+      secret: TEST_SECRET,
+      sendEmail: async () => {
+        // Simulate another request overwriting the OTP doc while this delivery was in flight
+        mock.store.set('auth_otps/a@b.com', {
+          hash: newerHash,
+          attempts: 0,
+          expiresAt: Date.now() + 600_000,
+          lastSentAt: Date.now(),
+        });
+        throw new Error('delayed sendgrid timeout');
+      },
+    });
+
+    const err = await call(staleFailure, { email: 'a@b.com' });
+    expect(err).toBeInstanceOf(HttpsError);
+    expect((err as HttpsError).code).toBe(OTP_ERROR_CODES.Internal);
+
+    // The newer OTP doc must remain intact
+    const remainingDoc = mock.store.get('auth_otps/a@b.com');
+    expect(remainingDoc).toBeDefined();
+    expect(remainingDoc!.hash).toBe(newerHash);
   });
 
   it('falls back to plain SHA-256 when secret is omitted', async () => {

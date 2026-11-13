@@ -23,6 +23,7 @@ interface MockDocRef {
 
 type MockTransaction = {
   get: (ref: MockDocRef) => Promise<{ exists: boolean; data: () => Record<string, unknown> | undefined }>;
+  set: (ref: MockDocRef, data: Record<string, unknown>) => void;
   delete: (ref: MockDocRef) => void;
   update: (ref: MockDocRef, data: Record<string, unknown>) => void;
 };
@@ -95,6 +96,8 @@ export function createMockFirestore(): MockFirestore {
     },
   });
 
+  let txQueue = Promise.resolve();
+
   const db = {
     collection: (name: string) => ({
       doc: (id: string) => makeRef(name, id),
@@ -103,23 +106,38 @@ export function createMockFirestore(): MockFirestore {
       get: async () => makeQuery(name, []).get(),
     }),
     runTransaction: async (fn: (tx: MockTransaction) => Promise<void>) => {
-      const pendingDeletes = new Set<string>();
-      const tx: MockTransaction = {
-        get: async (r) => {
-          const path = r.path;
-          if (pendingDeletes.has(path)) return { exists: false, data: () => undefined };
-          return snapshot(path);
-        },
-        delete: (r) => {
-          pendingDeletes.add(r.path);
-        },
-        update: (r, data) => {
-          const existing = store.get(r.path);
-          store.set(r.path, { ...existing, ...data });
-        },
-      };
-      await fn(tx);
-      for (const path of pendingDeletes) store.delete(path);
+      const run = txQueue.then(async () => {
+        const pendingDeletes = new Set<string>();
+        const pendingSets = new Map<string, Record<string, unknown>>();
+        const tx: MockTransaction = {
+          get: async (r) => {
+            const path = r.path;
+            if (pendingDeletes.has(path)) return { exists: false, data: () => undefined };
+            if (pendingSets.has(path)) {
+              const data = pendingSets.get(path);
+              return { exists: true, data: () => data };
+            }
+            return snapshot(path);
+          },
+          set: (r, data) => {
+            pendingDeletes.delete(r.path);
+            pendingSets.set(r.path, { ...data });
+          },
+          delete: (r) => {
+            pendingSets.delete(r.path);
+            pendingDeletes.add(r.path);
+          },
+          update: (r, data) => {
+            const existing = pendingSets.get(r.path) ?? store.get(r.path);
+            pendingSets.set(r.path, { ...existing, ...data });
+          },
+        };
+        await fn(tx);
+        for (const [path, data] of pendingSets) store.set(path, data);
+        for (const path of pendingDeletes) store.delete(path);
+      });
+      txQueue = run.catch(() => {});
+      return run;
     },
     batch: () => {
       const deletes = new Set<string>();
