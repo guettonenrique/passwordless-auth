@@ -21,7 +21,6 @@ const external = [
   'react',
   'react-native',
   'react-native-keyboard-controller',
-  'lucide-react-native',
   'expo-haptics',
 ];
 

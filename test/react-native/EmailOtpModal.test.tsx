@@ -17,13 +17,6 @@ vi.mock('react-native-keyboard-controller', () => ({
   KeyboardAwareScrollView: (props: { children: React.ReactNode }) => props.children,
 }));
 
-vi.mock('lucide-react-native', () => ({
-  Mail: () => null,
-  X: () => null,
-  AlertCircle: () => null,
-  ArrowLeft: () => null,
-}));
-
 import { EmailOtpModal } from '../../src/react-native/EmailOtpModal';
 import { requestEmailOtp, signInWithEmailOtp } from '../../src/react-native/api';
 

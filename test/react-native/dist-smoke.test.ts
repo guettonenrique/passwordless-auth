@@ -15,13 +15,6 @@ vi.mock('react-native-keyboard-controller', () => ({
   KeyboardAwareScrollView: (props: { children: unknown }) => props.children,
 }));
 
-vi.mock('lucide-react-native', () => ({
-  Mail: () => null,
-  X: () => null,
-  AlertCircle: () => null,
-  ArrowLeft: () => null,
-}));
-
 vi.mock('@react-native-firebase/functions', () => ({
   getFunctions: () => ({}),
   httpsCallable: () => async () => ({}),

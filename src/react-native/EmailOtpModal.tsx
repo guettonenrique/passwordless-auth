@@ -10,7 +10,6 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { AlertCircle, ArrowLeft, Mail, X } from 'lucide-react-native';
 import { CODE_LENGTH, RESEND_COOLDOWN_MS, isValidEmail } from '../shared';
 import { OtpInput } from './OtpInput';
 import { requestEmailOtp, signInWithEmailOtp } from './api';
@@ -226,8 +225,12 @@ export function EmailOtpModal({
               }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 {step === 'otp' && (
-                  <TouchableOpacity onPress={handleBackToEmail} disabled={loading} activeOpacity={0.7}>
-                    <ArrowLeft size={20} color="#64748b" />
+                  <TouchableOpacity
+                    onPress={handleBackToEmail}
+                    disabled={loading}
+                    activeOpacity={0.7}
+                    accessibilityLabel="Back">
+                    <Text style={{ fontSize: 18, color: '#64748b', fontWeight: '600' }}>←</Text>
                   </TouchableOpacity>
                 )}
                 <View>
@@ -243,8 +246,8 @@ export function EmailOtpModal({
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={handleClose} activeOpacity={0.7}>
-                <X size={20} color="#94a3b8" />
+              <TouchableOpacity onPress={handleClose} activeOpacity={0.7} accessibilityLabel="Close">
+                <Text style={{ fontSize: 20, color: '#94a3b8', fontWeight: '600' }}>×</Text>
               </TouchableOpacity>
             </View>
 
@@ -255,7 +258,6 @@ export function EmailOtpModal({
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 8,
                     padding: 12,
                     marginBottom: 16,
                     borderRadius: 12,
@@ -263,7 +265,6 @@ export function EmailOtpModal({
                     borderWidth: 1,
                     borderColor: '#fecaca',
                   }}>
-                  <AlertCircle size={16} color="#dc2626" />
                   <Text style={{ fontSize: 12, color: '#dc2626', flex: 1, fontWeight: '500' }}>
                     {error}
                   </Text>
@@ -310,7 +311,6 @@ export function EmailOtpModal({
                         autoFocus
                         editable={!loading}
                       />
-                      <Mail size={20} color="#cbd5e1" />
                     </View>
                   </View>
 
