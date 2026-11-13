@@ -104,19 +104,25 @@ describe('createVerifyEmailOtp', () => {
     expect(mock.store.has('auth_otps/a@b.com')).toBe(false);
   });
 
-  it('rejects an expired code and deletes the doc', async () => {
+  it('rejects an expired code, deletes the doc, and returns the same error as a missing doc', async () => {
     seedOtpDoc(mock, 'a@b.com', '111111', { expiresAt: Date.now() - 1 });
 
     const err = await call(handler, { email: 'a@b.com', code: '111111' });
-    expect((err as HttpsError).code).toBe(OTP_ERROR_CODES.DeadlineExceeded);
+    expect((err as HttpsError).code).toBe(OTP_ERROR_CODES.NotFound);
+    expect((err as HttpsError).message).toBe(
+      'Invalid or expired verification code. Please request a new code.'
+    );
     expect(mock.store.has('auth_otps/a@b.com')).toBe(false);
     expect(provision).not.toHaveBeenCalled();
   });
 
-  it('rejects when no OTP doc exists', async () => {
+  it('rejects when no OTP doc exists with the unified missing/expired error', async () => {
     const err = await call(handler, { email: 'nobody@b.com', code: '111111' });
     expect(err).toBeInstanceOf(HttpsError);
     expect((err as HttpsError).code).toBe(OTP_ERROR_CODES.NotFound);
+    expect((err as HttpsError).message).toBe(
+      'Invalid or expired verification code. Please request a new code.'
+    );
     expect(provision).not.toHaveBeenCalled();
   });
 

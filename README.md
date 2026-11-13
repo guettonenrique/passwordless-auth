@@ -332,8 +332,7 @@ exports.requestEmailOtp = createRequestEmailOtp({
 | Code                 | Meaning                                                                           |
 | -------------------- | --------------------------------------------------------------------------------- |
 | `invalid-argument`   | Bad email, wrong code format, or wrong code (message includes remaining attempts) |
-| `not-found`          | No active code for this email                                                     |
-| `deadline-exceeded`  | Code expired                                                                      |
+| `not-found`          | No active code or code expired (unified response to avoid state enumeration)      |
 | `resource-exhausted` | Cooldown active or attempts exhausted                                             |
 | `internal`           | Email delivery failed (doc is auto-cleaned)                                       |
 
@@ -387,13 +386,20 @@ server rate limit.
 
 ---
 
+## Security recommendations (WIP)
+
+- **Global & IP-based rate limiting:** This package only enforces a **per-email** resend cooldown and a **per-code** attempt cap — it does not implement global or IP-based rate limiting. To protect your email quota from automated abuse across many different email addresses, enable `enforceAppCheck: true` in production and configure rate limits or daily send caps at infrastructure/provider level.
+- **User provisioning (`provision` callback):** Since this package delegates finding/creating `uid` to the host app's `provision(email)` function and mints a custom token for that `uid`, make sure your user provisioning logic resolves users by normalized email, sets `emailVerified: true` only after OTP verification, and avoids creating duplicate users or linking existing accounts to unverified identities.
+
+---
+
 ## Testing the package
 
 ```bash
 npm install
 npm run typecheck   # 3 per-entry tsc passes
 npm run lint        # includes the cross-entry boundary rule
-npm test            # 66 tests: shared, functions (mocked Firestore/Auth), react-native
+npm test            # 68 tests: shared, functions (mocked Firestore/Auth), react-native
 npm run build       # tsup: ESM+CJS+DTS for each entry
 ```
 
