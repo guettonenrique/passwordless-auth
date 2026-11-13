@@ -145,16 +145,27 @@ export function createVerifyEmailOtp(options: VerifyOtpOptions) {
         throw verificationError;
       }
 
-      // 5. Project-specific user resolution & provisioning
-      const uid = await options.provision(email);
+      try {
+        // 5. Project-specific user resolution & provisioning
+        const uid = await options.provision(email);
 
-      // 6. Mint a Firebase custom token for the client to sign in with
-      const customToken = await getAuth().createCustomToken(uid);
+        // 6. Mint a Firebase custom token for the client to sign in with
+        const customToken = await getAuth().createCustomToken(uid);
 
-      return {
-        status: "success" as const,
-        customToken,
-      };
+        return {
+          status: "success" as const,
+          customToken,
+        };
+      } catch (err) {
+        if (err instanceof HttpsError) {
+          throw err;
+        }
+        console.error("Failed to provision user or mint custom token:", err);
+        throw new HttpsError(
+          OTP_ERROR_CODES.Internal,
+          "Failed to complete sign-in. Please request a new verification code.",
+        );
+      }
     },
   );
 }

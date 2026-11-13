@@ -164,6 +164,26 @@ describe('createVerifyEmailOtp', () => {
     expect(res.status).toBe('success');
   });
 
+  it('wraps unexpected provisioning errors in an internal HttpsError while passing intentional HttpsErrors through', async () => {
+    seedOtpDoc(mock, 'a@b.com', '111111');
+    provision.mockRejectedValueOnce(new Error('db timeout'));
+
+    const internalErr = await call(handler, { email: 'a@b.com', code: '111111' });
+    expect(internalErr).toBeInstanceOf(HttpsError);
+    expect((internalErr as HttpsError).code).toBe(OTP_ERROR_CODES.Internal);
+    expect((internalErr as HttpsError).message).toBe(
+      'Failed to complete sign-in. Please request a new verification code.'
+    );
+
+    seedOtpDoc(mock, 'a@b.com', '222222');
+    provision.mockRejectedValueOnce(new HttpsError('permission-denied', 'Account suspended.'));
+
+    const customErr = await call(handler, { email: 'a@b.com', code: '222222' });
+    expect(customErr).toBeInstanceOf(HttpsError);
+    expect((customErr as HttpsError).code).toBe('permission-denied');
+    expect((customErr as HttpsError).message).toBe('Account suspended.');
+  });
+
   it('auto-binds Firebase SecretParam objects from secret onto onCall options', () => {
     const fn = createVerifyEmailOtp({
       secret: { name: 'CUSTOM_OTP_HMAC', value: () => TEST_SECRET },
