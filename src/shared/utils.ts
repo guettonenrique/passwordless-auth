@@ -3,13 +3,27 @@ import { CODE_LENGTH } from './constants';
 /** Deliberately simple RFC-ish check — mirrors the client-side pre-check. */
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Trim + lowercase an email so doc keys and hash inputs always match. */
+/**
+ * RFC 5321 total-length limit for a mailbox address. We cap on the normalized
+ * value so over-long input fails fast as `invalid-argument` instead of blowing
+ * up inside the Firestore write (doc IDs are limited to 1500 bytes).
+ */
+const MAX_EMAIL_LENGTH = 254;
+
+/**
+ * Canonicalizes an email so doc keys and hash inputs always match:
+ * NFC-normalize (collapse composed/decomposed Unicode), trim, lowercase.
+ * NFC matters because mobile keyboards and OS autofill frequently emit NFD
+ * forms of accented characters — without it, two visually identical addresses
+ * would map to different OTP doc keys.
+ */
 export function normalizeEmail(raw: string): string {
-  return raw.trim().toLowerCase();
+  return raw.normalize('NFC').trim().toLowerCase();
 }
 
 export function isValidEmail(raw: string): boolean {
-  return EMAIL_REGEX.test(normalizeEmail(raw));
+  const normalized = normalizeEmail(raw);
+  return normalized.length <= MAX_EMAIL_LENGTH && EMAIL_REGEX.test(normalized);
 }
 
 export function isOtpCode(value: string, length: number = CODE_LENGTH): boolean {

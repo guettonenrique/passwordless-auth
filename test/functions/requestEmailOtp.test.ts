@@ -93,7 +93,7 @@ describe('createRequestEmailOtp', () => {
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
-  it('enforces the 60s resend cooldown with an accurate countdown', async () => {
+  it('suppresses the send during the 60s cooldown and returns the uniform success shape (no recency oracle)', async () => {
     // simulate a doc sent 30s ago
     mock.store.set('auth_otps/a@b.com', {
       hash: 'x',
@@ -102,12 +102,14 @@ describe('createRequestEmailOtp', () => {
       lastSentAt: Date.now() - 30_000,
     });
 
-    const err = await call(factory(), { email: 'a@b.com' });
-    expect(err).toBeInstanceOf(HttpsError);
-    expect((err as HttpsError).code).toBe(OTP_ERROR_CODES.ResourceExhausted);
-    expect((err as HttpsError).message).toBe(
-      'Please wait 30 seconds before requesting a new code.'
-    );
+    const res = await invoke(factory(), { email: 'a@b.com' });
+    // Throttled requests look identical to real dispatches so callers cannot
+    // tell whether a code was recently requested for this email.
+    expect(res).toEqual({ status: 'success', message: 'Verification code sent.' });
+    // No new email is delivered and the existing doc is left untouched.
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(sentEmails).toHaveLength(0);
+    expect(mock.store.get('auth_otps/a@b.com')!.hash).toBe('x');
   });
 
   it('allows a resend once the cooldown has elapsed', async () => {
@@ -127,18 +129,15 @@ describe('createRequestEmailOtp', () => {
   it('enforces the resend cooldown atomically across concurrent requests', async () => {
     const fn = factory();
     const results = await Promise.all([
-      call(fn, { email: 'a@b.com' }),
-      call(fn, { email: 'a@b.com' }),
-      call(fn, { email: 'a@b.com' }),
+      invoke(fn, { email: 'a@b.com' }),
+      invoke(fn, { email: 'a@b.com' }),
+      invoke(fn, { email: 'a@b.com' }),
     ]);
 
-    const successes = results.filter((r) => !(r instanceof HttpsError));
-    const errors = results.filter((r): r is HttpsError => r instanceof HttpsError);
-
-    expect(successes).toHaveLength(1);
-    expect(errors).toHaveLength(2);
-    for (const err of errors) {
-      expect(err.code).toBe(OTP_ERROR_CODES.ResourceExhausted);
+    // All three resolve to the success shape (one real dispatch, two throttled),
+    // but exactly one email is actually delivered.
+    for (const res of results) {
+      expect(res).toEqual({ status: 'success', message: 'Verification code sent.' });
     }
     expect(sentEmails).toHaveLength(1);
   });

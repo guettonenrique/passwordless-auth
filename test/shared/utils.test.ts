@@ -11,6 +11,14 @@ describe('normalizeEmail', () => {
   it('trims and lowercases', () => {
     expect(normalizeEmail('  Foo@Bar.COM ')).toBe('foo@bar.com');
   });
+
+  it('applies NFC normalization so composed/decomposed forms match', () => {
+    // "ä" as a single precomposed codepoint (NFC) vs "a" + combining diaeresis (NFD)
+    const nfc = `user@ex\u00e4mple.com`;
+    const nfd = `user@exa\u0308mple.com`;
+    expect(normalizeEmail(nfd)).toBe(normalizeEmail(nfc));
+    expect(normalizeEmail(nfd)).toBe(`user@ex\u00e4mple.com`);
+  });
 });
 
 describe('isValidEmail', () => {
@@ -27,6 +35,16 @@ describe('isValidEmail', () => {
     expect(isValidEmail('@domain.com')).toBe(false);
     expect(isValidEmail('user @domain.com')).toBe(false);
     expect(isValidEmail('user@domain')).toBe(false);
+  });
+
+  it('accepts an address at exactly the 254-char limit and rejects longer ones', () => {
+    const domain = 'example.com'; // 11 chars
+    const atSign = '@'; // 1 char
+    const localAtLimit = 'a'.repeat(254 - domain.length - atSign.length);
+    expect(isValidEmail(`${localAtLimit}@${domain}`)).toBe(true);
+
+    const localOverLimit = 'a'.repeat(254 - domain.length - atSign.length + 1);
+    expect(isValidEmail(`${localOverLimit}@${domain}`)).toBe(false);
   });
 });
 

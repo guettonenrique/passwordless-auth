@@ -38,7 +38,7 @@ export function createVerifyEmailOtp(options: VerifyOtpOptions) {
 
   return onCall<VerifyOtpPayload, Promise<VerifyOtpResponse>>(
     {
-      enforceAppCheck: options.enforceAppCheck ?? false,
+      enforceAppCheck: options.enforceAppCheck ?? true,
       ...(secrets.length > 0 ? { secrets: secrets.map((s) => s.name) } : {}),
     },
     async (request) => {

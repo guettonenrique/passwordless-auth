@@ -5,7 +5,6 @@ import {
   DEFAULT_COLLECTION,
   OTP_EXPIRY_MS,
   RESEND_COOLDOWN_MS,
-  cooldownMessage,
   buildOtpEmail,
   isValidEmail,
   normalizeEmail,
@@ -54,7 +53,7 @@ export function createRequestEmailOtp(options: RequestOtpOptions) {
 
   return onCall<RequestOtpPayload, Promise<RequestOtpResponse>>(
     {
-      enforceAppCheck: options.enforceAppCheck ?? false,
+      enforceAppCheck: options.enforceAppCheck ?? true,
       ...(secrets.length > 0 ? { secrets: secrets.map((s) => s.name) } : {}),
     },
     async (request) => {
@@ -77,23 +76,22 @@ export function createRequestEmailOtp(options: RequestOtpOptions) {
 
       let code = '';
       let codeHash = '';
-      let cooldownError: HttpsError | null = null;
+      let throttled = false;
 
       await db.runTransaction(async (transaction) => {
-        cooldownError = null;
         const existingSnap = await transaction.get(otpDocRef);
         const now = Date.now();
 
-        // Enforce the resend cooldown atomically
+        // Enforce the resend cooldown atomically. When active we skip the send
+        // and return the same success shape as a real dispatch, so callers can't
+        // use the response to tell whether a code was recently requested for this
+        // email (no liveness/recency oracle). Clients drive their own countdown.
         if (existingSnap.exists) {
           const data = existingSnap.data();
           const lastSentAt = data?.lastSentAt || 0;
           const elapsed = now - lastSentAt;
           if (elapsed < cooldownMs) {
-            cooldownError = new HttpsError(
-              OTP_ERROR_CODES.ResourceExhausted,
-              cooldownMessage(cooldownMs - elapsed)
-            );
+            throttled = true;
             return;
           }
         }
@@ -110,8 +108,11 @@ export function createRequestEmailOtp(options: RequestOtpOptions) {
         });
       });
 
-      if (cooldownError) {
-        throw cooldownError;
+      if (throttled) {
+        return {
+          status: 'success' as const,
+          message: 'Verification code sent.',
+        };
       }
 
       const composed = buildOtpEmail({

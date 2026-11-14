@@ -94,7 +94,11 @@ export interface BaseOtpOptions {
   expiryMs?: number;
   /** Failed verifications before the code is invalidated. Default: 5. */
   maxAttempts?: number;
-  /** Enforce App Check on the callable. Default: false (flip true in production). */
+  /**
+   * Enforce App Check on the callable. Default: `true`. Set to `false` only for
+   * local/emulator testing or environments where App Check is not configured —
+   * leaving it off in production removes a key defense against scripted abuse.
+   */
   enforceAppCheck?: boolean;
 }
 

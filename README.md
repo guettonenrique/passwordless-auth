@@ -57,13 +57,13 @@ const sendgridKey = defineSecret("SENDGRID_API_KEY");
 exports.requestEmailOtp = createRequestEmailOtp({
   appName: "MyApp",
   secret: otpSecret,
-  enforceAppCheck: false,
+  // enforceAppCheck defaults to true; pass it explicitly and set it to false only if needed.
   sendgrid: {
     apiKey: sendgridKey,
     fromEmail: "no-reply@yourdomain.com",
     fromName: "MyApp Support",
   },
-  // Or for local/emulator testing only (never log OTPs in production):
+  // Or for local/emulator testing only (never log OTPs in production!):
   // sendEmail: async (email) => {
   //   console.log(`[DEV OTP] ${email.to} → ${email.subject}`);
   // },
@@ -87,7 +87,7 @@ const provision = async (email: string): Promise<string> => {
 
 exports.verifyEmailOtp = createVerifyEmailOtp({
   secret: otpSecret,
-  enforceAppCheck: false,
+  // enforceAppCheck defaults to true; pass it explicitly and set it to false only if needed.
   provision,
 });
 ```
@@ -215,11 +215,11 @@ The callable names and payloads must match the deployed backend functions. You c
 | `cooldownMs`         | `60_000`              | Resend rate limit                                                                                      |
 | `expiryMs`           | `600_000`             | Code lifetime (10 min)                                                                                 |
 | `maxAttempts`        | `5`                   | Brute-force cap per code                                                                               |
-| `enforceAppCheck`    | `false`               | Flip to `true` in production once App Check is configured in your environment                          |
+| `enforceAppCheck`    | `true`                | Enforces Firebase App Check on the callable; pass `false` only if needed                               |
 | `sendEmail`          | SendGrid sender       | Custom `(email: OtpEmail) => Promise<void>` to swap providers or log in dev                            |
 | `schedule` (cleanup) | `'every 15 minutes'`  | Cloud Scheduler syntax                                                                                 |
 
-**Dev mode without SendGrid** (use this for local/emulator testing only; never log OTPs in production):
+**Dev mode without SendGrid** (use this for local/emulator testing only; never log OTPs in production!):
 
 ```typescript
 exports.requestEmailOtp = createRequestEmailOtp({
@@ -232,12 +232,12 @@ exports.requestEmailOtp = createRequestEmailOtp({
 
 ### Error contract (surfaced verbatim to users)
 
-| Code                 | Meaning                                                                           |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `invalid-argument`   | Bad email, wrong code format, or wrong code (message includes remaining attempts) |
-| `not-found`          | No active code or code expired (unified response to avoid state enumeration)      |
-| `resource-exhausted` | Cooldown active or attempts exhausted                                             |
-| `internal`           | Email delivery failed (doc is auto-cleaned)                                       |
+| Code                 | Meaning                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `invalid-argument`   | Bad email, wrong code format, or wrong code (message includes remaining attempts)                                       |
+| `not-found`          | No active code or code expired (unified response to avoid state enumeration)                                            |
+| `resource-exhausted` | Attempts exhausted on verify. (A request during the resend cooldown returns the normal success shape — no send occurs.) |
+| `internal`           | Email delivery failed (doc is auto-cleaned)                                                                             |
 
 ---
 
@@ -254,8 +254,9 @@ exports.requestEmailOtp = createRequestEmailOtp({
 ### Your responsibilities
 
 - **Firestore rules (Critical):** Make sure to block **every** client-side access to `auth_otps` (or your custom `collection`) in your Firestore rules, and ensure no catch-all wildcard `allow` rule overrides it. This collection should only be managed by backend Cloud Functions via the Admin SDK.
-- **User provisioning (`provision` callback):** Since this package delegates finding/creating `uid` to your app's `provision(email)` function and mints a custom token for that `uid`, make sure your user provisioning logic resolves users by normalized email, sets `emailVerified: true` only after OTP verification, and avoids creating duplicate users or linking existing accounts to unverified identities.
-- **Global & IP-based rate limiting:** This package enforces a **per-email** resend cooldown and a **per-code** attempt cap, but it does not implement global or IP-based rate limiting. To protect your email quota from automated abuse across many different email addresses, enable `enforceAppCheck: true` in production and configure rate limits or daily send caps at the infrastructure/provider level.
+- **User provisioning (`provision` callback):** Since this package delegates finding/creating `uid` to your app's `provision(email)` function and mints a custom token for that `uid`, make sure your user provisioning logic resolves users by normalized email, sets `emailVerified: true` only after OTP verification, and avoids creating duplicate users or linking existing accounts to unverified identities. Note that the `email` you receive is already canonicalized by this package (NFC-normalized, trimmed, lowercased) — treat it as authoritative and do not re-derive identity from raw client input. If your user store applies additional normalization, ensure it agrees with this package's output so two visually identical addresses don't resolve to different users.
+- **App Check (on by default):** Both callables enforce Firebase App Check unless you set `enforceAppCheck: false`. Make sure App Check is configured for your environment (e.g. Play Integrity / SafetyNet on Android, DeviceCheck on iOS) so legitimate clients pass; otherwise they will be rejected.
+- **Global & IP-based rate limiting:** This package does not implement global or IP-based rate limiting. App Check (enabled by default) blocks most scripted clients, but to fully protect your email quota from abuse across many different addresses, configure rate limits or daily send caps at the infrastructure/provider level.
 
 ---
 
