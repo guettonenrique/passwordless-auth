@@ -1,4 +1,15 @@
-# @guettonenrique/passwordless-auth
+# @guettonenrique/passwordless-auth (Deprecated)
+
+> ⚠️ **Deprecated:** This package has been renamed and moved to [**`firebase-email-otp`**](https://www.npmjs.com/package/firebase-email-otp) ([GitHub repository](https://github.com/firebase-email-otp/firebase-email-otp)).
+>
+> Please migrate by installing the new package:
+>
+> ```bash
+> npm uninstall @guettonenrique/passwordless-auth
+> npm install firebase-email-otp
+> ```
+
+---
 
 Passwordless **email OTP** authentication in one package with four entry points:
 
@@ -23,12 +34,12 @@ npm install @guettonenrique/passwordless-auth
 
 Install the peer packages required by the entry point you use:
 
-| Entry              | Required in the consuming project                                                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/functions`       | `firebase-functions >=6`, `firebase-admin >=11`, `@sendgrid/mail >=8` _(optional if passing a custom `sendEmail`)_                                     |
-| `/react-native`    | `@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/functions` (`>=22`)                                               |
+| Entry              | Required in the consuming project                                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/functions`       | `firebase-functions >=6`, `firebase-admin >=11`, `@sendgrid/mail >=8` _(optional if passing a custom `sendEmail`)_                                 |
+| `/react-native`    | `@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/functions` (`>=22`)                                           |
 | `/react-native/ui` | `@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/functions` (`>=22`), `react-native-keyboard-controller >=1.7` |
-| `/shared`          | Nothing (pure TypeScript)                                                                                                                              |
+| `/shared`          | Nothing (pure TypeScript)                                                                                                                          |
 
 > Peers are declared **optional** in `package.json`, so npm will not auto-install them — install the set for the entry point you use. The table above is the authoritative per-entry contract.
 
