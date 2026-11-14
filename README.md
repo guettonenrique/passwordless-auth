@@ -23,12 +23,12 @@ npm install @guettonenrique/passwordless-auth
 
 Install the peer packages required by the entry point you use:
 
-| Entry              | Required in the consuming project                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `/functions`       | `firebase-functions >=4`, `firebase-admin >=11`, `@sendgrid/mail >=8` _(optional if passing a custom `sendEmail`)_ |
-| `/react-native`    | `@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/functions` (`>=17`)           |
-| `/react-native/ui` | `@react-native-firebase/app`, `auth`, `functions` (`>=17`), `react-native-keyboard-controller >=1`                 |
-| `/shared`          | Nothing (pure TypeScript)                                                                                          |
+| Entry              | Required in the consuming project                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/functions`       | `firebase-functions >=6`, `firebase-admin >=11`, `@sendgrid/mail >=8` _(optional if passing a custom `sendEmail`)_                                     |
+| `/react-native`    | `@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/functions` (`>=22`)                                               |
+| `/react-native/ui` | `@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/functions` (`>=22`), `react-native-keyboard-controller >=1.7` |
+| `/shared`          | Nothing (pure TypeScript)                                                                                                                              |
 
 > Peers are declared **optional** in `package.json`, so npm will not auto-install them — install the set for the entry point you use. The table above is the authoritative per-entry contract.
 
