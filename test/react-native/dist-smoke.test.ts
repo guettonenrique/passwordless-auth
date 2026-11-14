@@ -28,7 +28,9 @@ vi.mock('@react-native-firebase/auth', () => ({
 // cwd-independent: resolved relative to this file (test/react-native/ → ../../dist)
 const distRoot = new URL('../../dist/', import.meta.url).pathname;
 const hasDist =
-  existsSync(`${distRoot}react-native/index.js`) && existsSync(`${distRoot}functions/index.cjs`);
+  existsSync(`${distRoot}react-native/index.js`) &&
+  existsSync(`${distRoot}react-native/ui/index.js`) &&
+  existsSync(`${distRoot}functions/index.cjs`);
 
 describe.skipIf(!hasDist)('built dist artifacts', () => {
   it('react-native ESM entry loads and exports the public API', async () => {
@@ -36,6 +38,13 @@ describe.skipIf(!hasDist)('built dist artifacts', () => {
     expect(typeof mod.requestEmailOtp).toBe('function');
     expect(typeof mod.verifyEmailOtp).toBe('function');
     expect(typeof mod.signInWithEmailOtp).toBe('function');
+    // base entry is the API layer only — components live in /react-native/ui
+    expect(mod.OtpInput).toBeUndefined();
+    expect(mod.EmailOtpModal).toBeUndefined();
+  });
+
+  it('react-native/ui ESM entry loads and exports the components', async () => {
+    const mod = await import(`${distRoot}react-native/ui/index.js`);
     expect(typeof mod.OtpInput).toBe('function');
     expect(typeof mod.EmailOtpModal).toBe('function');
   });

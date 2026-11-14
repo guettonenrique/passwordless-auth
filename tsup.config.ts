@@ -29,6 +29,7 @@ export default defineConfig({
     'shared/index': 'src/shared/index.ts',
     'functions/index': 'src/functions/index.ts',
     'react-native/index': 'src/react-native/index.ts',
+    'react-native/ui/index': 'src/react-native/ui/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,

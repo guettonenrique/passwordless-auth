@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
-import { OtpInput } from '../../src/react-native/OtpInput';
+import { OtpInput } from '../../src/react-native/ui/OtpInput';
 
 const HIDDEN_INPUT_LABEL = '6-digit verification code';
 

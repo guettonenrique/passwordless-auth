@@ -7,7 +7,7 @@ import {
   View,
   type TextInputInstance,
 } from 'react-native';
-import { CODE_LENGTH } from '../shared';
+import { CODE_LENGTH } from '../../shared';
 
 // expo-haptics is an optional peer: degrade silently when absent.
 let Haptics: {

@@ -17,7 +17,7 @@ vi.mock('react-native-keyboard-controller', () => ({
   KeyboardAwareScrollView: (props: { children: React.ReactNode }) => props.children,
 }));
 
-import { EmailOtpModal } from '../../src/react-native/EmailOtpModal';
+import { EmailOtpModal } from '../../src/react-native/ui/EmailOtpModal';
 import { requestEmailOtp, signInWithEmailOtp } from '../../src/react-native/api';
 
 let renderer: ReactTestRenderer | undefined;

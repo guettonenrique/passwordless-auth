@@ -10,9 +10,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import { CODE_LENGTH, RESEND_COOLDOWN_MS, isValidEmail } from '../shared';
+import { CODE_LENGTH, RESEND_COOLDOWN_MS, isValidEmail } from '../../shared';
 import { OtpInput } from './OtpInput';
-import { requestEmailOtp, signInWithEmailOtp } from './api';
+import { requestEmailOtp, signInWithEmailOtp } from '../api';
 
 export interface EmailOtpModalProps {
   visible: boolean;

@@ -1,9 +1,10 @@
 # @guettonenrique/passwordless-auth
 
-Passwordless **email OTP** authentication in one package with three entry points:
+Passwordless **email OTP** authentication in one package with four entry points:
 
 - **`/functions`** — ready-to-register Firebase Cloud Function factories for sending codes, verifying codes, and scheduled cleanup.
-- **`/react-native`** — optional mobile API layer plus `<OtpInput />` (auto-fill code boxes) and `<EmailOtpModal />` (the full two-step dialog).
+- **`/react-native`** — mobile API layer (`requestEmailOtp`, `verifyEmailOtp`, `signInWithEmailOtp`).
+- **`/react-native/ui`** — opt-in pre-built components: `<OtpInput />` (auto-fill code boxes) and `<EmailOtpModal />` (the full two-step dialog).
 - **`/shared`** — pure TypeScript constants, types, validation, and the email template, with no SDK imports.
 
 You can use `/functions` without installing the package on the client if you prefer to own your email form, OTP input, styling, and error handling.
@@ -22,10 +23,14 @@ npm install @guettonenrique/passwordless-auth
 
 Install the peer packages required by the entry point you use:
 
-| Entry           | Required in the consuming project                                                                                                                                             |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/functions`    | `firebase-functions >=4`, `firebase-admin >=11`, `@sendgrid/mail >=8`                                                                                                         |
-| `/react-native` | `@react-native-firebase/app + auth + functions >=17`, `react >=18`, `react-native >=0.73`, `react-native-keyboard-controller >=1`; optional: `expo-haptics` (haptic feedback) |
+| Entry              | Required in the consuming project                                                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/functions`       | `firebase-functions >=4`, `firebase-admin >=11`, `@sendgrid/mail >=8`                                                                                             |
+| `/react-native`    | `@react-native-firebase/app + auth + functions >=17`                                                                                                              |
+| `/react-native/ui` | Everything `/react-native` requires, plus `react >=18`, `react-native >=0.73`, `react-native-keyboard-controller >=1`; optional: `expo-haptics` (haptic feedback) |
+| `/shared`          | Nothing (pure TypeScript)                                                                                                                                         |
+
+> Peers are declared **optional** in `package.json`, so npm will not auto-install them — install the set for the entry point you use. The table above is the authoritative per-entry contract.
 
 ---
 
@@ -128,7 +133,7 @@ Choose either the pre-built `/react-native` entry point or your own UI calling t
 
 ```tsx
 import { useState } from "react";
-import { EmailOtpModal } from "@guettonenrique/passwordless-auth/react-native";
+import { EmailOtpModal } from "@guettonenrique/passwordless-auth/react-native/ui";
 
 const [otpVisible, setOtpVisible] = useState(false);
 
@@ -152,8 +157,9 @@ import {
   requestEmailOtp, // (email) → { status, message }
   verifyEmailOtp, // (email, code) → customToken
   signInWithEmailOtp, // (email, code) → signs in via signInWithCustomToken
-  OtpInput, // 6-slot auto-fill code input
 } from "@guettonenrique/passwordless-auth/react-native";
+
+import { OtpInput } from "@guettonenrique/passwordless-auth/react-native/ui"; // 6-slot auto-fill code input
 ```
 
 `<OtpInput />` uses a single hidden native input and calls `onComplete` when the last digit arrives — wire it to `signInWithEmailOtp` for auto-submit.
