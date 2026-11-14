@@ -9,30 +9,6 @@ import {
 } from 'react-native';
 import { CODE_LENGTH } from '../../shared';
 
-// expo-haptics is an optional peer: degrade silently when absent.
-let Haptics: {
-  impactAsync?: (style: string) => Promise<void>;
-  notificationAsync?: (type: string) => Promise<void>;
-} | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  Haptics = require('expo-haptics');
-} catch {
-  Haptics = null;
-}
-
-const impact = (style: 'light' | 'success') => {
-  try {
-    if (style === 'light') {
-      Haptics?.impactAsync?.('light').catch(() => null);
-    } else {
-      Haptics?.notificationAsync?.('success').catch(() => null);
-    }
-  } catch {
-    // haptics are best-effort
-  }
-};
-
 export interface OtpInputProps {
   /** Number of digits. Default 6 (matches the backend). */
   length?: number;
@@ -80,10 +56,7 @@ export function OtpInput({
     const cleaned = text.replace(/[^0-9]/g, '').slice(0, length);
     onChange(cleaned);
 
-    if (cleaned.length > value.length) impact('light');
-
     if (cleaned.length === length) {
-      impact('success');
       onComplete?.(cleaned);
     }
   };
