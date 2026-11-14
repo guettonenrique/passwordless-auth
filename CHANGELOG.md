@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/guettonenrique/passwordless-auth/compare/v0.1.5...v0.1.6) (2026-11-14)
+
+
+### Bug Fixes
+
+* default App Check to true, suppress cooldown oracle, harden email normalization ([aa48f6c](https://github.com/guettonenrique/passwordless-auth/commit/aa48f6c77bce2375c396bf1850c7de12aaa9dfbe))
+
 ## [0.1.5](https://github.com/guettonenrique/passwordless-auth/compare/v0.1.4...v0.1.5) (2026-11-13)
 
 
